@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FDEC Scheduler</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy-900:#14202E;
+    --navy-800:#1B2C3D;
+    --navy-700:#243B52;
+    --bg:#F1F3F5;
+    --surface:#FFFFFF;
+    --border:#DBE0E5;
+    --border-soft:#E9ECEF;
+    --text:#182430;
+    --text-muted:#5C6B7A;
+    --text-faint:#8B97A3;
+    --accent:#C1432A;
+    --accent-dark:#9E3521;
+    --accent-ink:#FFFFFF;
+    --good:#2E7D5B;
+    --good-bg:#E4F3EC;
+    --warn:#B4790E;
+    --warn-bg:#FBF0DA;
+    --danger:#B23A2E;
+    --danger-bg:#FAE6E3;
+    --muted-bg:#EEF1F3;
+    --radius:6px;
+    --shadow:0 1px 2px rgba(20,32,46,0.08), 0 4px 14px rgba(20,32,46,0.06);
+    font-size:15px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family:'IBM Plex Sans', system-ui, sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'IBM Plex Mono', ui-monospace, monospace;}
+  button{font-family:inherit; cursor:pointer;}
+  input, select, textarea{font-family:inherit; font-size:14px;}
+  a{color:inherit;}
+
+  /* ---------- Login ---------- */
+  #loginScreen{
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    background: linear-gradient(160deg, var(--navy-900) 0%, var(--navy-800) 55%, var(--navy-700) 100%);
+    padding:24px;
+  }
+  .login-card{
+    width:100%; max-width:360px; background:var(--surface); border-radius:8px;
+    padding:32px 28px 28px; box-shadow:0 20px 60px rgba(0,0,0,0.35);
+  }
+  .login-mark{
+    display:flex; align-items:center; gap:10px; margin-bottom:22px;
+  }
+  .login-mark .sq{
+    width:34px; height:34px; border-radius:6px; background:var(--accent);
+    display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:15px;
+    flex-shrink:0;
+  }
+  .login-mark .name{font-weight:600; font-size:16px; line-height:1.15;}
+  .login-mark .sub{font-size:11.5px; color:var(--text-muted); letter-spacing:.02em;}
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:12.5px; color:var(--text-muted); margin-bottom:5px; font-weight:500;}
+  .field input{
+    width:100%; padding:9px 11px; border:1px solid var(--border); border-radius:5px; outline:none;
+    transition:border-color .12s;
+  }
+  .field input:focus{border-color:var(--accent);}
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    padding:9px 16px; border-radius:5px; border:1px solid transparent; font-size:13.5px; font-weight:600;
+    transition:background .12s, border-color .12s, color .12s;
+  }
+  .btn-primary{background:var(--accent); color:#fff;}
+  .btn-primary:hover{background:var(--accent-dark);}
+  .btn-primary:disabled{opacity:.55; cursor:default;}
+  .btn-ghost{background:transparent; border-color:var(--border); color:var(--text);}
+  .btn-ghost:hover{background:var(--muted-bg);}
+  .btn-block{width:100%;}
+  .btn-sm{padding:5px 10px; font-size:12.5px;}
+  .btn-danger{background:transparent; border-color:var(--danger); color:var(--danger);}
+  .btn-danger:hover{background:var(--danger-bg);}
+  .login-error{
+    font-size:12.5px; color:var(--danger); background:var(--danger-bg); padding:8px 10px; border-radius:5px;
+    margin-bottom:12px; display:none;
+  }
+  .login-foot{margin-top:16px; font-size:11.5px; color:var(--text-faint); line-height:1.5;}
+
+  /* ---------- App shell ---------- */
+  #app{display:none; min-height:100vh;}
+  #app.active{display:flex;}
+  .sidebar{
+    width:212px; flex-shrink:0; background:var(--navy-900); color:#fff;
+    display:flex; flex-direction:column; padding:18px 12px;
+  }
+  .sidebar .brand{display:flex; align-items:center; gap:9px; padding:4px 8px 20px;}
+  .sidebar .brand .sq{
+    width:28px; height:28px; border-radius:5px; background:var(--accent); flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px;
+  }
+  .sidebar .brand .txt{font-weight:600; font-size:14.5px; line-height:1.2;}
+  .sidebar .brand .txt small{display:block; font-weight:400; font-size:10.5px; color:#93A3B3; letter-spacing:.02em;}
+  .navitem{
+    display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:5px; margin-bottom:2px;
+    color:#B7C2CC; font-size:13.5px; font-weight:500; text-decoration:none; border:none; background:transparent;
+    width:100%; text-align:left;
+  }
+  .navitem .ic{width:16px; text-align:center; flex-shrink:0; font-size:14px;}
+  .navitem:hover{background:rgba(255,255,255,0.06); color:#fff;}
+  .navitem.active{background:rgba(193,67,42,0.18); color:#fff;}
+  .navitem.active .ic{color:var(--accent);}
+  .sidebar .spacer{flex:1;}
+  .sidebar .userbox{
+    border-top:1px solid rgba(255,255,255,0.1); padding-top:12px; margin-top:8px;
+  }
+  .sidebar .userbox .uname{font-size:12.5px; font-weight:600; color:#fff; margin-bottom:6px; word-break:break-word;}
+  .sidebar .signout{
+    background:transparent; border:1px solid rgba(255,255,255,0.18); color:#B7C2CC; width:100%;
+    padding:6px 8px; border-radius:5px; font-size:12px;
+  }
+  .sidebar .signout:hover{background:rgba(255,255,255,0.08); color:#fff;}
+
+  .main{flex:1; min-width:0; display:flex; flex-direction:column; height:100vh; overflow:hidden;}
+  .topbar{
+    padding:16px 26px; border-bottom:1px solid var(--border); background:var(--surface);
+    display:flex; align-items:center; justify-content:space-between; flex-shrink:0;
+  }
+  .topbar h1{font-size:18px; margin:0; font-weight:600;}
+  .topbar .sub{font-size:12.5px; color:var(--text-muted); margin-top:2px;}
+  .topbar-actions{display:flex; gap:8px; align-items:center;}
+  .view{flex:1; overflow-y:auto; padding:22px 26px 60px;}
+  .view-section{display:none;}
+  .view-section.active{display:block;}
+
+  /* ---------- Generic components ---------- */
+  .panel{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); }
+  .panel + .panel{margin-top:14px;}
+  .panel-head{
+    display:flex; align-items:center; justify-content:space-between; padding:12px 16px;
+    border-bottom:1px solid var(--border-soft);
+  }
+  .panel-head h3{margin:0; font-size:13.5px; font-weight:600;}
+  .panel-body{padding:14px 16px;}
+  .empty-state{padding:36px 20px; text-align:center; color:var(--text-faint); font-size:13px;}
+  .empty-state .big{font-size:26px; margin-bottom:6px;}
+
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th{
+    text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-faint);
+    font-weight:600; padding:8px 10px; border-bottom:1px solid var(--border);
+  }
+  td{padding:10px; border-bottom:1px solid var(--border-soft); vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  tr.archived-row{opacity:.55;}
+
+  .badge{
+    display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:20px;
+    font-size:11px; font-weight:600; white-space:nowrap;
+  }
+  .badge-good{background:var(--good-bg); color:var(--good);}
+  .badge-warn{background:var(--warn-bg); color:var(--warn);}
+  .badge-danger{background:var(--danger-bg); color:var(--danger);}
+  .badge-muted{background:var(--muted-bg); color:var(--text-muted);}
+  .dot{width:8px; height:8px; border-radius:50%; flex-shrink:0; display:inline-block;}
+
+  .toolbar{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .toolbar select, .toolbar input[type=text], .toolbar input[type=search]{
+    padding:7px 9px; border:1px solid var(--border); border-radius:5px; background:var(--surface); font-size:13px;
+  }
+  .search-box{position:relative;}
+  .search-box input{padding-left:26px; min-width:180px;}
+  .search-box .ic{position:absolute; left:9px; top:50%; transform:translateY(-50%); color:var(--text-faint); font-size:12px;}
+
+  .link-btn{background:none; border:none; color:var(--accent); font-size:12.5px; font-weight:600; padding:2px 4px;}
+  .link-btn:hover{text-decoration:underline;}
+  .icon-btn{
+    background:none; border:1px solid var(--border); border-radius:4px; width:26px; height:26px;
+    display:inline-flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:12px;
+  }
+  .icon-btn:hover{background:var(--muted-bg); color:var(--text);}
+
+  .cust-row{cursor:pointer;}
+  .cust-row:hover{background:var(--muted-bg);}
+  .loc-sub{background:#FAFBFC;}
+  .loc-sub td{padding:0;}
+  .loc-inner{padding:6px 10px 10px 30px;}
+  .loc-card{
+    border:1px solid var(--border-soft); border-radius:5px; padding:9px 12px; margin-top:6px; background:var(--surface);
+  }
+  .loc-card-head{display:flex; align-items:center; justify-content:space-between;}
+  .loc-card-title{font-weight:600; font-size:13px;}
+  .loc-card-addr{font-size:11.5px; color:var(--text-muted); margin-top:1px;}
+  .loc-chips{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;}
+  .mini-chip{
+    font-size:11px; padding:3px 8px; border-radius:4px; background:var(--muted-bg); color:var(--text);
+    display:flex; align-items:center; gap:5px; border:1px solid var(--border-soft);
+  }
+
+  /* ---------- Modal ---------- */
+  .modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(15,22,30,0.5); z-index:100;
+    align-items:flex-start; justify-content:center; padding:40px 16px; overflow-y:auto;
+  }
+  .modal-overlay.active{display:flex;}
+  .modal{
+    background:var(--surface); border-radius:8px; width:100%; max-width:460px; box-shadow:0 20px 60px rgba(0,0,0,0.3);
+    animation:modalIn .12s ease-out;
+  }
+  @keyframes modalIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+  .modal-head{
+    padding:15px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;
+  }
+  .modal-head h3{margin:0; font-size:15px; font-weight:600;}
+  .modal-close{background:none; border:none; font-size:18px; color:var(--text-faint); line-height:1;}
+  .modal-body{padding:18px;}
+  .modal-foot{padding:14px 18px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px;}
+  .form-row{margin-bottom:13px;}
+  .form-row label{display:block; font-size:12.5px; font-weight:600; color:var(--text-muted); margin-bottom:5px;}
+  .form-row input, .form-row select, .form-row textarea{
+    width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:5px; outline:none;
+  }
+  .form-row input:focus, .form-row select:focus, .form-row textarea:focus{border-color:var(--accent);}
+  .form-row textarea{resize:vertical; min-height:64px;}
+  .form-grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .checklist{display:flex; flex-direction:column; gap:6px; max-height:160px; overflow-y:auto; border:1px solid var(--border-soft); border-radius:5px; padding:8px;}
+  .checklist label{display:flex; align-items:center; gap:8px; font-size:13px; font-weight:400; color:var(--text); margin:0;}
+  .form-hint{font-size:11.5px; color:var(--text-faint); margin-top:4px;}
+
+  /* ---------- Calendar ---------- */
+  .cal-toolbar{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:10px;}
+  .cal-nav{display:flex; align-items:center; gap:8px;}
+  .cal-nav .month-label{font-size:16px; font-weight:600; min-width:170px; text-align:center;}
+  .cal-legend{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+  .legend-item{display:flex; align-items:center; gap:5px; font-size:11.5px; color:var(--text-muted);}
+  .cal-grid{display:grid; grid-template-columns:repeat(7,1fr); border:1px solid var(--border); border-radius:6px; overflow:hidden; background:var(--border-soft);}
+  .cal-dow{background:var(--navy-900); color:#B7C2CC; text-align:center; padding:7px 0; font-size:11px; font-weight:600; letter-spacing:.03em; text-transform:uppercase;}
+  .cal-cell{
+    background:var(--surface); min-height:104px; padding:6px; display:flex; flex-direction:column; gap:3px;
+    position:relative;
+  }
+  .cal-cell.outside{background:#F7F8F9; color:var(--text-faint);}
+  .cal-cell.today .cal-daynum{background:var(--accent); color:#fff; border-radius:50%;}
+  .cal-daynum{font-size:11.5px; font-weight:600; width:20px; height:20px; display:flex; align-items:center; justify-content:center; margin-bottom:2px;}
+  .cal-add{
+    position:absolute; top:4px; right:4px; opacity:0; background:none; border:1px solid var(--border);
+    border-radius:4px; width:18px; height:18px; font-size:12px; color:var(--text-muted); line-height:1;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .cal-cell:hover .cal-add{opacity:1;}
+  .cal-chip{
+    font-size:10.5px; padding:2.5px 5px; border-radius:3px; background:var(--muted-bg); color:var(--text);
+    border-left:3px solid var(--text-faint); cursor:pointer; line-height:1.35; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .cal-chip:hover{filter:brightness(0.96);}
+  .cal-chip.due{border-left-style:dashed; font-style:italic;}
+  .cal-more{font-size:10.5px; color:var(--text-muted); padding:1px 5px; cursor:pointer;}
+
+  /* ---------- Dashboard ---------- */
+  .kpi-row{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px;}
+  .kpi{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px;}
+  .kpi .num{font-size:24px; font-weight:700; font-family:'IBM Plex Mono';}
+  .kpi .lbl{font-size:12px; color:var(--text-muted); margin-top:2px;}
+  .kpi.danger .num{color:var(--danger);}
+  .kpi.warn .num{color:var(--warn);}
+  .two-col{display:grid; grid-template-columns:1.3fr 1fr; gap:14px; align-items:start;}
+  @media (max-width:980px){ .two-col{grid-template-columns:1fr;} .kpi-row{grid-template-columns:repeat(2,1fr);} }
+
+  .agenda-item{display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--border-soft);}
+  .agenda-item:last-child{border-bottom:none;}
+  .agenda-date{font-family:'IBM Plex Mono'; font-size:11.5px; color:var(--text-muted); width:56px; flex-shrink:0;}
+  .agenda-main{flex:1; min-width:0;}
+  .agenda-title{font-size:13px; font-weight:600;}
+  .agenda-sub{font-size:11.5px; color:var(--text-muted);}
+
+  .toast{
+    position:fixed; bottom:20px; right:20px; background:var(--navy-900); color:#fff; padding:11px 16px;
+    border-radius:6px; font-size:13px; box-shadow:0 8px 24px rgba(0,0,0,0.25); z-index:200;
+    display:flex; align-items:center; gap:8px; transform:translateY(12px); opacity:0; transition:all .18s;
+  }
+  .toast.show{transform:translateY(0); opacity:1;}
+  .toast.err{background:var(--danger);}
+
+  ::-webkit-scrollbar{width:9px; height:9px;}
+  ::-webkit-scrollbar-thumb{background:#C8CFD5; border-radius:5px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+</style>
+</head>
+<body>
+
+<!-- ===================== LOGIN ===================== -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-mark">
+      <div class="sq">FD</div>
+      <div class="name">FDEC Scheduler<br><span class="sub">Sprinkler Department</span></div>
+    </div>
+    <div class="login-error" id="loginError"></div>
+    <div class="field">
+      <label for="loginEmail">Email</label>
+      <input type="email" id="loginEmail" autocomplete="username" placeholder="you@fdec.com">
+    </div>
+    <div class="field">
+      <label for="loginPass">Password</label>
+      <input type="password" id="loginPass" autocomplete="current-password" placeholder="••••••••">
+    </div>
+    <button class="btn btn-primary btn-block" id="loginBtn" onclick="doSignIn()">Sign in</button>
+    <div class="login-foot">Accounts are created by an FDEC admin in the Firebase console. Contact your manager if you need access.</div>
+  </div>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div id="app">
+  <div class="sidebar">
+    <div class="brand">
+      <div class="sq">FD</div>
+      <div class="txt">FDEC Scheduler<small>Sprinkler Dept.</small></div>
+    </div>
+    <button class="navitem active" data-view="dashboard" onclick="switchView('dashboard')"><span class="ic">&#9673;</span> Dashboard</button>
+    <button class="navitem" data-view="calendar" onclick="switchView('calendar')"><span class="ic">&#128197;</span> Schedule</button>
+    <button class="navitem" data-view="customers" onclick="switchView('customers')"><span class="ic">&#127970;</span> Customers</button>
+    <button class="navitem" data-view="jobs" onclick="switchView('jobs')"><span class="ic">&#128295;</span> Jobs</button>
+    <button class="navitem" data-view="technicians" onclick="switchView('technicians')"><span class="ic">&#128119;</span> Technicians</button>
+    <div class="spacer"></div>
+    <div class="userbox">
+      <div class="uname" id="userEmailLabel">—</div>
+      <button class="signout" onclick="doSignOut()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <h1 id="topbarTitle">Dashboard</h1>
+        <div class="sub" id="topbarSub">Overview of upcoming work and ITM services due</div>
+      </div>
+      <div class="topbar-actions" id="topbarActions"></div>
+    </div>
+
+    <div class="view">
+
+      <!-- ---------- DASHBOARD ---------- -->
+      <div class="view-section active" id="view-dashboard">
+        <div class="kpi-row">
+          <div class="kpi"><div class="num" id="kpiActiveCustomers">0</div><div class="lbl">Active customers</div></div>
+          <div class="kpi"><div class="num" id="kpiActiveLocations">0</div><div class="lbl">Active locations</div></div>
+          <div class="kpi warn"><div class="num" id="kpiDueSoon">0</div><div class="lbl">ITM services due (30 days)</div></div>
+          <div class="kpi danger"><div class="num" id="kpiOverdue">0</div><div class="lbl">Overdue services</div></div>
+        </div>
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-head"><h3>Next 14 days — jobs &amp; services due</h3></div>
+            <div class="panel-body" id="agendaList"><div class="empty-state">Loading…</div></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h3>Overdue / due-soon services</h3></div>
+            <div class="panel-body" id="dueList"><div class="empty-state">Loading…</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---------- CALENDAR ---------- -->
+      <div class="view-section" id="view-calendar">
+        <div class="cal-toolbar">
+          <div class="cal-nav">
+            <button class="icon-btn" onclick="calShiftMonth(-1)">&#8249;</button>
+            <div class="month-label" id="calMonthLabel">—</div>
+            <button class="icon-btn" onclick="calShiftMonth(1)">&#8250;</button>
+            <button class="btn btn-ghost btn-sm" onclick="calGoToday()">Today</button>
+          </div>
+          <div class="toolbar">
+            <select id="calTechFilter" onchange="renderCalendar()">
+              <option value="">All technicians</option>
+            </select>
+            <label style="font-size:12.5px; color:var(--text-muted); display:flex; align-items:center; gap:5px;">
+              <input type="checkbox" id="calShowDue" checked onchange="renderCalendar()"> Show ITM due
+            </label>
+          </div>
+        </div>
+        <div class="cal-legend" id="calLegend" style="margin-bottom:10px;"></div>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+
+      <!-- ---------- CUSTOMERS ---------- -->
+      <div class="view-section" id="view-customers">
+        <div class="toolbar" style="margin-bottom:12px;">
+          <div class="search-box"><span class="ic">&#128269;</span><input type="text" id="custSearch" placeholder="Search customers…" oninput="renderCustomers()"></div>
+          <label style="font-size:12.5px; color:var(--text-muted); display:flex; align-items:center; gap:5px;">
+            <input type="checkbox" id="custShowArchived" onchange="renderCustomers()"> Show archived
+          </label>
+        </div>
+        <div class="panel">
+          <table>
+            <thead><tr><th style="width:26px;"></th><th>Company</th><th>Locations</th><th>Status</th><th style="width:90px;"></th></tr></thead>
+            <tbody id="customerTableBody"></tbody>
+          </table>
+          <div class="empty-state" id="customerEmpty" style="display:none;">
+            <div class="big">&#127970;</div>No customers yet. Add your first customer to get started.
+          </div>
+        </div>
+      </div>
+
+      <!-- ---------- JOBS ---------- -->
+      <div class="view-section" id="view-jobs">
+        <div class="toolbar" style="margin-bottom:12px;">
+          <select id="jobFilterType" onchange="renderJobs()">
+            <option value="">All job types</option>
+            <option>Repair</option><option>Install</option><option>Inspection</option><option>Emergency Call</option><option>Survey</option>
+          </select>
+          <select id="jobFilterStatus" onchange="renderJobs()">
+            <option value="">All statuses</option>
+            <option>Scheduled</option><option>In Progress</option><option>Completed</option><option>Cancelled</option>
+          </select>
+          <select id="jobFilterTech" onchange="renderJobs()"><option value="">All technicians</option></select>
+        </div>
+        <div class="panel">
+          <table>
+            <thead><tr><th>Date</th><th>Type</th><th>Customer / Location</th><th>Technicians</th><th>Status</th><th style="width:70px;"></th></tr></thead>
+            <tbody id="jobsTableBody"></tbody>
+          </table>
+          <div class="empty-state" id="jobsEmpty" style="display:none;">
+            <div class="big">&#128295;</div>No jobs match these filters.
+          </div>
+        </div>
+      </div>
+
+      <!-- ---------- TECHNICIANS ---------- -->
+      <div class="view-section" id="view-technicians">
+        <div class="panel">
+          <table>
+            <thead><tr><th style="width:26px;"></th><th>Name</th><th>Open jobs</th><th>Status</th><th style="width:90px;"></th></tr></thead>
+            <tbody id="techTableBody"></tbody>
+          </table>
+          <div class="empty-state" id="techEmpty" style="display:none;">
+            <div class="big">&#128119;</div>No technicians yet.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ===================== MODALS ===================== -->
+
+<!-- Add / edit customer -->
+<div class="modal-overlay" id="modalCustomer">
+  <div class="modal">
+    <div class="modal-head"><h3 id="modalCustomerTitle">Add customer</h3><button class="modal-close" onclick="closeModal('modalCustomer')">&times;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="custId">
+      <div class="form-row"><label>Company name</label><input type="text" id="custName" placeholder="e.g. Great Lakes Manufacturing"></div>
+      <div class="form-row"><label>Notes (optional)</label><textarea id="custNotes" placeholder="Billing contact, account notes…"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modalCustomer')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCustomer()">Save customer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add / edit location -->
+<div class="modal-overlay" id="modalLocation">
+  <div class="modal">
+    <div class="modal-head"><h3 id="modalLocationTitle">Add location</h3><button class="modal-close" onclick="closeModal('modalLocation')">&times;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="locId"><input type="hidden" id="locCustId">
+      <div class="form-row"><label>Location name</label><input type="text" id="locName" placeholder="e.g. Main Plant, Building B"></div>
+      <div class="form-row"><label>Address</label><input type="text" id="locAddress" placeholder="Street, city, state, ZIP"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modalLocation')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveLocation()">Save location</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add / edit ITM service -->
+<div class="modal-overlay" id="modalService">
+  <div class="modal">
+    <div class="modal-head"><h3 id="modalServiceTitle">Add ITM service</h3><button class="modal-close" onclick="closeModal('modalService')">&times;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="svcId"><input type="hidden" id="svcLocId">
+      <div class="form-row"><label>Service type</label>
+        <select id="svcType">
+          <option>Wet System Inspection</option>
+          <option>Dry System Inspection</option>
+          <option>Preaction / Deluge Inspection</option>
+          <option>Fire Pump Test</option>
+          <option>Backflow / Double Check Test</option>
+          <option>Standpipe Inspection</option>
+          <option>Fire Alarm Inspection</option>
+          <option>Kitchen Hood / Suppression Inspection</option>
+          <option>Fire Extinguisher Inspection</option>
+          <option>5-Year Internal Obstruction Inspection</option>
+          <option>Antifreeze System Test</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="form-grid2">
+        <div class="form-row"><label>Frequency</label>
+          <select id="svcFrequency">
+            <option value="1">Monthly</option>
+            <option value="3">Quarterly</option>
+            <option value="6" selected>Semi-annual</option>
+            <option value="12">Annual</option>
+            <option value="36">3-Year</option>
+            <option value="60">5-Year</option>
+          </select>
+        </div>
+        <div class="form-row"><label>Last completed</label><input type="date" id="svcLastCompleted"></div>
+      </div>
+      <div class="form-row"><label>Next due</label><input type="date" id="svcNextDue"></div>
+      <div class="form-row"><label>Default technician (optional)</label><select id="svcTech"><option value="">Unassigned</option></select></div>
+      <div class="form-row"><label>Notes (optional)</label><textarea id="svcNotes"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modalService')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveService()">Save service</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add / edit job -->
+<div class="modal-overlay" id="modalJob">
+  <div class="modal">
+    <div class="modal-head"><h3 id="modalJobTitle">Add job</h3><button class="modal-close" onclick="closeModal('modalJob')">&times;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="jobId">
+      <div class="form-row"><label>Customer</label><select id="jobCustomer" onchange="populateLocationSelect()"><option value="">Select a customer…</option></select></div>
+      <div class="form-row"><label>Location</label><select id="jobLocation"><option value="">Select a customer first…</option></select></div>
+      <div class="form-grid2">
+        <div class="form-row"><label>Job type</label>
+          <select id="jobType">
+            <option>Repair</option><option>Install</option><option>Inspection</option><option>Emergency Call</option><option>Survey</option>
+          </select>
+        </div>
+        <div class="form-row"><label>Scheduled date</label><input type="date" id="jobDate"></div>
+      </div>
+      <div class="form-row"><label>Status</label>
+        <select id="jobStatus"><option>Scheduled</option><option>In Progress</option><option>Completed</option><option>Cancelled</option></select>
+      </div>
+      <div class="form-row"><label>Technicians</label><div class="checklist" id="jobTechChecklist"></div></div>
+      <div class="form-row"><label>Notes (optional)</label><textarea id="jobNotes" placeholder="Scope, PO number, access instructions…"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger" id="jobDeleteBtn" style="display:none; margin-right:auto;" onclick="deleteJobConfirm()">Delete</button>
+      <button class="btn btn-ghost" onclick="closeModal('modalJob')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveJob()">Save job</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add / edit technician -->
+<div class="modal-overlay" id="modalTech">
+  <div class="modal">
+    <div class="modal-head"><h3 id="modalTechTitle">Add technician</h3><button class="modal-close" onclick="closeModal('modalTech')">&times;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="techId">
+      <div class="form-row"><label>Name</label><input type="text" id="techName" placeholder="First and last name"></div>
+      <div class="form-row"><label>Calendar color</label>
+        <div id="techColorSwatches" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+        <input type="hidden" id="techColor">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modalTech')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTechnician()">Save technician</button>
+    </div>
+  </div>
+</div>
+
+<!-- Due service detail (schedule / complete) -->
+<div class="modal-overlay" id="modalDue">
+  <div class="modal">
+    <div class="modal-head"><h3>ITM service due</h3><button class="modal-close" onclick="closeModal('modalDue')">&times;</button></div>
+    <div class="modal-body" id="dueModalBody"></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modalDue')">Close</button>
+      <button class="btn btn-ghost" onclick="markServiceComplete()">Mark complete</button>
+      <button class="btn btn-primary" onclick="scheduleServiceAsJob()">Schedule as job</button>
+    </div>
+  </div>
+</div>
+
+<!-- Day agenda (calendar "more" popover shown as modal) -->
+<div class="modal-overlay" id="modalDayAgenda">
+  <div class="modal">
+    <div class="modal-head"><h3 id="dayAgendaTitle">Day</h3><button class="modal-close" onclick="closeModal('modalDayAgenda')">&times;</button></div>
+    <div class="modal-body" id="dayAgendaBody"></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modalDayAgenda')">Close</button>
+      <button class="btn btn-primary" id="dayAgendaAddBtn">Add job</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== FIREBASE ===================== -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+/* ============================================================
+   FIREBASE CONFIG — replace with your project's config object.
+   (Same Firebase project as the time-off app can be reused;
+   just add this domain to Authorized Domains in Firebase Auth,
+   and add the collections below to Firestore security rules.)
+   ============================================================ */
+const firebaseConfig = {
+  apiKey: "REPLACE_ME",
+  authDomain: "REPLACE_ME.firebaseapp.com",
+  projectId: "REPLACE_ME",
+  storageBucket: "REPLACE_ME.appspot.com",
+  messagingSenderId: "REPLACE_ME",
+  appId: "REPLACE_ME"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+/* ============================================================
+   STATE
+   ============================================================ */
+let customers = [];
+let locations = [];
+let services = [];
+let jobs = [];
+let technicians = [];
+let unsubscribers = [];
+let currentView = 'dashboard';
+let calMonth = new Date(); calMonth.setDate(1);
+let expandedCustomerIds = new Set();
+
+const JOB_TYPES = ['Repair','Install','Inspection','Emergency Call','Survey'];
+const JOB_TYPE_ABBR = {'Repair':'RPR','Install':'INST','Inspection':'INSP','Emergency Call':'EMRG','Survey':'SURV'};
+const TECH_PALETTE = ['#2E6F9E','#8A4FC1','#C1432A','#2E7D5B','#C98A1E','#4F6BC1','#B23A80','#5B8A2E','#3E8FA6','#A65A2E'];
+
+/* ============================================================
+   AUTH
+   ============================================================ */
+function doSignIn(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const errBox = document.getElementById('loginError');
+  errBox.style.display = 'none';
+  if(!email || !pass){ showLoginError('Enter your email and password.'); return; }
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  auth.signInWithEmailAndPassword(email, pass)
+    .catch(err => showLoginError(friendlyAuthError(err)))
+    .finally(()=>{ btn.disabled = false; btn.textContent = 'Sign in'; });
+}
+function showLoginError(msg){
+  const box = document.getElementById('loginError');
+  box.textContent = msg; box.style.display = 'block';
+}
+function friendlyAuthError(err){
+  const map = {
+    'auth/invalid-email':'That email address looks invalid.',
+    'auth/user-not-found':'No account found for that email.',
+    'auth/wrong-password':'Incorrect password.',
+    'auth/invalid-credential':'Incorrect email or password.',
+    'auth/too-many-requests':'Too many attempts. Try again in a few minutes.'
+  };
+  return map[err.code] || ('Sign-in failed: ' + err.message);
+}
+function doSignOut(){ auth.signOut(); }
+
+document.getElementById('loginPass').addEventListener('keydown', e => { if(e.key==='Enter') doSignIn(); });
+document.getElementById('loginEmail').addEventListener('keydown', e => { if(e.key==='Enter') doSignIn(); });
+
+auth.onAuthStateChanged(user => {
+  if(user){
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('app').classList.add('active');
+    document.getElementById('userEmailLabel').textContent = user.email || 'Signed in';
+    startListeners();
+  } else {
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('app').classList.remove('active');
+    unsubscribers.forEach(u => u());
+    unsubscribers = [];
+  }
+});
+
+/* ============================================================
+   FIRESTORE LISTENERS
+   ============================================================ */
+function startListeners(){
+  unsubscribers.push(db.collection('customers').onSnapshot(snap => {
+    customers = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    customers.sort((a,b)=> (a.name||'').localeCompare(b.name||''));
+    renderAll();
+  }, err => toast('Error loading customers: '+err.message, true)));
+
+  unsubscribers.push(db.collection('locations').onSnapshot(snap => {
+    locations = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    renderAll();
+  }, err => toast('Error loading locations: '+err.message, true)));
+
+  unsubscribers.push(db.collection('services').onSnapshot(snap => {
+    services = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    renderAll();
+  }, err => toast('Error loading services: '+err.message, true)));
+
+  unsubscribers.push(db.collection('jobs').onSnapshot(snap => {
+    jobs = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    renderAll();
+  }, err => toast('Error loading jobs: '+err.message, true)));
+
+  unsubscribers.push(db.collection('technicians').onSnapshot(snap => {
+    technicians = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    technicians.sort((a,b)=> (a.name||'').localeCompare(b.name||''));
+    renderAll();
+  }, err => toast('Error loading technicians: '+err.message, true)));
+}
+
+function renderAll(){
+  populateTechSelects();
+  renderDashboard();
+  renderCalendar();
+  renderCustomers();
+  renderJobs();
+  renderTechnicians();
+}
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+const VIEW_TITLES = {
+  dashboard:['Dashboard','Overview of upcoming work and ITM services due'],
+  calendar:['Schedule','Jobs and ITM services by day, color-coded by technician'],
+  customers:['Customers','Companies, locations, and recurring ITM services'],
+  jobs:['Jobs','Repairs, installs, inspections, emergency calls, and surveys'],
+  technicians:['Technicians','Manage the technician roster']
+};
+function switchView(view){
+  currentView = view;
+  document.querySelectorAll('.navitem').forEach(n => n.classList.toggle('active', n.dataset.view===view));
+  document.querySelectorAll('.view-section').forEach(v => v.classList.toggle('active', v.id === 'view-'+view));
+  document.getElementById('topbarTitle').textContent = VIEW_TITLES[view][0];
+  document.getElementById('topbarSub').textContent = VIEW_TITLES[view][1];
+  renderTopbarActions(view);
+  if(view==='calendar') renderCalendar();
+}
+function renderTopbarActions(view){
+  const box = document.getElementById('topbarActions');
+  box.innerHTML = '';
+  const actions = {
+    customers: [['+ Add customer','openCustomerModal()']],
+    jobs: [['+ Add job','openJobModal()']],
+    technicians: [['+ Add technician','openTechModal()']]
+  };
+  if(actions[view]){
+    actions[view].forEach(([label, fn])=>{
+      const b = document.createElement('button');
+      b.className='btn btn-primary btn-sm'; b.textContent=label; b.setAttribute('onclick', fn);
+      box.appendChild(b);
+    });
+  }
+}
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function uid(){ return db.collection('_').doc().id; }
+function toast(msg, isErr){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show' + (isErr?' err':'');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=> t.classList.remove('show'), 3200);
+}
+function openModal(id){ document.getElementById(id).classList.add('active'); }
+function closeModal(id){ document.getElementById(id).classList.remove('active'); }
+function fmtDate(iso){
+  if(!iso) return '—';
+  const d = new Date(iso+'T00:00:00');
+  return d.toLocaleDateString('en-US',{month:'short', day:'numeric', year:'numeric'});
+}
+function fmtDateShort(iso){
+  const d = new Date(iso+'T00:00:00');
+  return d.toLocaleDateString('en-US',{month:'short', day:'numeric'});
+}
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function addMonths(iso, months){
+  const d = new Date(iso+'T00:00:00');
+  d.setMonth(d.getMonth()+months);
+  return d.toISOString().slice(0,10);
+}
+function daysBetween(isoA, isoB){
+  const a = new Date(isoA+'T00:00:00'), b = new Date(isoB+'T00:00:00');
+  return Math.round((a-b)/86400000);
+}
+function customerById(id){ return customers.find(c=>c.id===id); }
+function locationById(id){ return locations.find(l=>l.id===id); }
+function techById(id){ return technicians.find(t=>t.id===id); }
+function locationsForCustomer(custId){ return locations.filter(l=>l.customerId===custId); }
+function servicesForLocation(locId){ return services.filter(s=>s.locationId===locId); }
+function techColorDot(color){ return `<span class="dot" style="background:${color||'#8B97A3'}"></span>`; }
+
+function dueStatus(nextDue){
+  if(!nextDue) return {label:'No date', cls:'badge-muted'};
+  const diff = daysBetween(nextDue, todayISO());
+  if(diff > 0) return {label:'Overdue '+diff+'d', cls:'badge-danger'};
+  if(diff >= -30) return {label:'Due in '+(-diff)+'d', cls:'badge-warn'};
+  return {label:'On track', cls:'badge-good'};
+}
+
+/* ============================================================
+   DASHBOARD
+   ============================================================ */
+function renderDashboard(){
+  const activeCustomers = customers.filter(c=>c.active!==false).length;
+  const activeLocations = locations.filter(l=>l.active!==false).length;
+  let dueSoon=0, overdue=0;
+  const today = todayISO();
+  services.forEach(s=>{
+    if(s.active===false || !s.nextDue) return;
+    const diff = daysBetween(s.nextDue, today);
+    if(diff>0) overdue++;
+    else if(diff>=-30) dueSoon++;
+  });
+  document.getElementById('kpiActiveCustomers').textContent = activeCustomers;
+  document.getElementById('kpiActiveLocations').textContent = activeLocations;
+  document.getElementById('kpiDueSoon').textContent = dueSoon;
+  document.getElementById('kpiOverdue').textContent = overdue;
+
+  // Agenda: next 14 days of jobs + due services
+  const horizon = 14;
+  const items = [];
+  jobs.forEach(j=>{
+    if(!j.scheduledDate || j.status==='Cancelled') return;
+    const diff = daysBetween(j.scheduledDate, today);
+    if(diff>=0 && diff<=horizon) items.push({date:j.scheduledDate, type:'job', title:j.jobType+' — '+(j.customerName||''), sub:(j.locationName||'')+(j.techIds&&j.techIds.length?' · '+j.techIds.map(id=>techById(id)?.name).filter(Boolean).join(', '):'')});
+  });
+  services.forEach(s=>{
+    if(s.active===false || !s.nextDue) return;
+    const diff = daysBetween(s.nextDue, today);
+    if(diff>=0 && diff<=horizon) items.push({date:s.nextDue, type:'due', title:'ITM Due — '+s.serviceType, sub:(s.customerName||'')+' · '+(s.locationName||'')});
+  });
+  items.sort((a,b)=> a.date.localeCompare(b.date));
+  const agendaBox = document.getElementById('agendaList');
+  if(items.length===0){
+    agendaBox.innerHTML = '<div class="empty-state">Nothing scheduled in the next 14 days.</div>';
+  } else {
+    agendaBox.innerHTML = items.slice(0,25).map(it=>`
+      <div class="agenda-item">
+        <div class="agenda-date">${fmtDateShort(it.date)}</div>
+        <div class="agenda-main">
+          <div class="agenda-title">${escapeHtml(it.title)}</div>
+          <div class="agenda-sub">${escapeHtml(it.sub)}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  // Due / overdue list
+  const dueItems = services.filter(s=>s.active!==false && s.nextDue).map(s=>({...s, diff: daysBetween(s.nextDue, today)}))
+    .filter(s=>s.diff >= -30).sort((a,b)=> b.diff - a.diff);
+  const dueBox = document.getElementById('dueList');
+  if(dueItems.length===0){
+    dueBox.innerHTML = '<div class="empty-state">Nothing overdue or due soon.</div>';
+  } else {
+    dueBox.innerHTML = dueItems.slice(0,25).map(s=>{
+      const st = dueStatus(s.nextDue);
+      return `<div class="agenda-item" style="cursor:pointer" onclick="openDueModal('${s.id}')">
+        <div class="agenda-date"><span class="badge ${st.cls}">${st.label}</span></div>
+        <div class="agenda-main">
+          <div class="agenda-title">${escapeHtml(s.serviceType)}</div>
+          <div class="agenda-sub">${escapeHtml(s.customerName||'')} · ${escapeHtml(s.locationName||'')}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+function escapeHtml(str){
+  return (str||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+/* ============================================================
+   CUSTOMERS + LOCATIONS
+   ============================================================ */
+function renderCustomers(){
+  const search = (document.getElementById('custSearch').value||'').toLowerCase();
+  const showArchived = document.getElementById('custShowArchived').checked;
+  let list = customers.filter(c => showArchived || c.active!==false);
+  if(search) list = list.filter(c => (c.name||'').toLowerCase().includes(search));
+  const body = document.getElementById('customerTableBody');
+  document.getElementById('customerEmpty').style.display = list.length? 'none':'block';
+  body.innerHTML = '';
+  list.forEach(c => {
+    const locs = locationsForCustomer(c.id);
+    const activeLocs = locs.filter(l=>l.active!==false);
+    const expanded = expandedCustomerIds.has(c.id);
+    const tr = document.createElement('tr');
+    tr.className = 'cust-row' + (c.active===false?' archived-row':'');
+    tr.innerHTML = `
+      <td>${expanded?'&#9662;':'&#9656;'}</td>
+      <td><strong>${escapeHtml(c.name)}</strong>${c.notes?`<div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">${escapeHtml(c.notes)}</div>`:''}</td>
+      <td>${activeLocs.length} location${activeLocs.length!==1?'s':''}</td>
+      <td>${c.active===false?'<span class="badge badge-muted">Archived</span>':'<span class="badge badge-good">Active</span>'}</td>
+      <td style="text-align:right;">
+        <button class="icon-btn" title="Edit" onclick="event.stopPropagation(); openCustomerModal('${c.id}')">&#9998;</button>
+        <button class="icon-btn" title="${c.active===false?'Reactivate':'Archive'}" onclick="event.stopPropagation(); toggleCustomerActive('${c.id}')">${c.active===false?'&#8635;':'&#128465;'}</button>
+      </td>`;
+    tr.onclick = () => { toggleCustomerExpand(c.id); };
+    body.appendChild(tr);
+
+    if(expanded){
+      const subTr = document.createElement('tr');
+      subTr.className = 'loc-sub';
+      const locsToShow = showArchived ? locs : activeLocs;
+      subTr.innerHTML = `<td colspan="5"><div class="loc-inner">
+        ${locsToShow.map(l => renderLocationCard(l, c)).join('') || '<div style="font-size:12.5px;color:var(--text-faint);padding:6px 0;">No locations yet.</div>'}
+        <button class="link-btn" onclick="openLocationModal(null,'${c.id}')" style="margin-top:6px;">+ Add location</button>
+      </div></td>`;
+      body.appendChild(subTr);
+    }
+  });
+}
+function toggleCustomerExpand(id){
+  if(expandedCustomerIds.has(id)) expandedCustomerIds.delete(id); else expandedCustomerIds.add(id);
+  renderCustomers();
+}
+function renderLocationCard(l, c){
+  const svcs = servicesForLocation(l.id).filter(s=>s.active!==false);
+  return `<div class="loc-card${l.active===false?' archived-row':''}">
+    <div class="loc-card-head">
+      <div>
+        <div class="loc-card-title">${escapeHtml(l.name)} ${l.active===false?'<span class="badge badge-muted" style="margin-left:6px;">Archived</span>':''}</div>
+        <div class="loc-card-addr">${escapeHtml(l.address||'No address on file')}</div>
+      </div>
+      <div>
+        <button class="icon-btn" title="Edit" onclick="openLocationModal('${l.id}','${c.id}')">&#9998;</button>
+        <button class="icon-btn" title="${l.active===false?'Reactivate':'Archive'}" onclick="toggleLocationActive('${l.id}')">${l.active===false?'&#8635;':'&#128465;'}</button>
+        <button class="icon-btn" title="Add ITM service" onclick="openServiceModal(null,'${l.id}')">+</button>
+      </div>
+    </div>
+    <div class="loc-chips">
+      ${svcs.length? svcs.map(s=>{
+        const st = dueStatus(s.nextDue);
+        return `<span class="mini-chip" style="cursor:pointer" onclick="openServiceModal('${s.id}','${l.id}')" title="Next due ${fmtDate(s.nextDue)}"><span class="badge ${st.cls}" style="padding:1px 6px;">${st.label}</span> ${escapeHtml(s.serviceType)}</span>`;
+      }).join('') : '<span style="font-size:11.5px;color:var(--text-faint);">No ITM services scheduled.</span>'}
+    </div>
+  </div>`;
+}
+
+function openCustomerModal(id){
+  document.getElementById('custId').value = id || '';
+  document.getElementById('custName').value = '';
+  document.getElementById('custNotes').value = '';
+  document.getElementById('modalCustomerTitle').textContent = id ? 'Edit customer' : 'Add customer';
+  if(id){
+    const c = customerById(id);
+    if(c){ document.getElementById('custName').value = c.name||''; document.getElementById('custNotes').value = c.notes||''; }
+  }
+  openModal('modalCustomer');
+}
+function saveCustomer(){
+  const id = document.getElementById('custId').value;
+  const name = document.getElementById('custName').value.trim();
+  const notes = document.getElementById('custNotes').value.trim();
+  if(!name){ toast('Company name is required.', true); return; }
+  const data = { name, notes, active:true, updatedAt: new Date().toISOString() };
+  if(id){
+    db.collection('customers').doc(id).update({name, notes, updatedAt:data.updatedAt})
+      .then(()=>{ toast('Customer updated.'); closeModal('modalCustomer'); syncDenormalizedNames(id, name); })
+      .catch(e=>toast(e.message, true));
+  } else {
+    data.createdAt = new Date().toISOString();
+    db.collection('customers').add(data)
+      .then(()=>{ toast('Customer added.'); closeModal('modalCustomer'); })
+      .catch(e=>toast(e.message, true));
+  }
+}
+function toggleCustomerActive(id){
+  const c = customerById(id); if(!c) return;
+  db.collection('customers').doc(id).update({active: c.active===false})
+    .then(()=> toast(c.active===false ? 'Customer reactivated.' : 'Customer archived.'))
+    .catch(e=>toast(e.message, true));
+}
+function syncDenormalizedNames(custId, name){
+  // Keep displayed customer names in sync on locations/services/jobs (best-effort, non-blocking)
+  const batchUpdate = (col, field) => {
+    const rows = (col==='locations'?locations:col==='services'?services:jobs).filter(r=>r.customerId===custId);
+    rows.forEach(r => db.collection(col).doc(r.id).update({customerName:name}).catch(()=>{}));
+  };
+  batchUpdate('locations'); batchUpdate('services'); batchUpdate('jobs');
+}
+
+function openLocationModal(id, custId){
+  document.getElementById('locId').value = id || '';
+  document.getElementById('locCustId').value = custId || '';
+  document.getElementById('locName').value = '';
+  document.getElementById('locAddress').value = '';
+  document.getElementById('modalLocationTitle').textContent = id ? 'Edit location' : 'Add location';
+  if(id){
+    const l = locationById(id);
+    if(l){ document.getElementById('locName').value = l.name||''; document.getElementById('locAddress').value = l.address||''; }
+  }
+  openModal('modalLocation');
+}
+function saveLocation(){
+  const id = document.getElementById('locId').value;
+  const custId = document.getElementById('locCustId').value;
+  const name = document.getElementById('locName').value.trim();
+  const address = document.getElementById('locAddress').value.trim();
+  if(!name){ toast('Location name is required.', true); return; }
+  const cust = customerById(custId);
+  if(id){
+    db.collection('locations').doc(id).update({name, address})
+      .then(()=>{ toast('Location updated.'); closeModal('modalLocation'); })
+      .catch(e=>toast(e.message, true));
+  } else {
+    db.collection('locations').add({
+      name, address, customerId: custId, customerName: cust?cust.name:'', active:true, createdAt:new Date().toISOString()
+    }).then(()=>{ toast('Location added.'); closeModal('modalLocation'); expandedCustomerIds.add(custId); })
+      .catch(e=>toast(e.message, true));
+  }
+}
+function toggleLocationActive(id){
+  const l = locationById(id); if(!l) return;
+  db.collection('locations').doc(id).update({active: l.active===false})
+    .then(()=> toast(l.active===false ? 'Location reactivated.' : 'Location archived.'))
+    .catch(e=>toast(e.message, true));
+}
+
+/* ============================================================
+   ITM SERVICES (recurring, tied to a location)
+   ============================================================ */
+function openServiceModal(id, locId){
+  document.getElementById('svcId').value = id || '';
+  document.getElementById('svcLocId').value = locId || '';
+  document.getElementById('svcType').value = 'Wet System Inspection';
+  document.getElementById('svcFrequency').value = '6';
+  document.getElementById('svcLastCompleted').value = '';
+  document.getElementById('svcNextDue').value = '';
+  document.getElementById('svcTech').value = '';
+  document.getElementById('svcNotes').value = '';
+  document.getElementById('modalServiceTitle').textContent = id ? 'Edit ITM service' : 'Add ITM service';
+  if(id){
+    const s = services.find(x=>x.id===id);
+    if(s){
+      document.getElementById('svcType').value = s.serviceType||'Wet System Inspection';
+      document.getElementById('svcFrequency').value = s.frequencyMonths||6;
+      document.getElementById('svcLastCompleted').value = s.lastCompleted||'';
+      document.getElementById('svcNextDue').value = s.nextDue||'';
+      document.getElementById('svcTech').value = s.assignedTechId||'';
+      document.getElementById('svcNotes').value = s.notes||'';
+    }
+  }
+  openModal('modalService');
+}
+document.getElementById('svcLastCompleted').addEventListener('change', ()=>{
+  const lc = document.getElementById('svcLastCompleted').value;
+  const freq = parseInt(document.getElementById('svcFrequency').value,10);
+  if(lc) document.getElementById('svcNextDue').value = addMonths(lc, freq);
+});
+document.getElementById('svcFrequency').addEventListener('change', ()=>{
+  const lc = document.getElementById('svcLastCompleted').value;
+  const freq = parseInt(document.getElementById('svcFrequency').value,10);
+  if(lc) document.getElementById('svcNextDue').value = addMonths(lc, freq);
+});
+function saveService(){
+  const id = document.getElementById('svcId').value;
+  const locId = document.getElementById('svcLocId').value;
+  const serviceType = document.getElementById('svcType').value;
+  const frequencyMonths = parseInt(document.getElementById('svcFrequency').value,10);
+  const lastCompleted = document.getElementById('svcLastCompleted').value || null;
+  const nextDue = document.getElementById('svcNextDue').value;
+  const assignedTechId = document.getElementById('svcTech').value || null;
+  const notes = document.getElementById('svcNotes').value.trim();
+  if(!nextDue){ toast('Next due date is required.', true); return; }
+  const loc = locationById(locId);
+  const cust = loc ? customerById(loc.customerId) : null;
+  const data = {
+    locationId: locId, customerId: loc?loc.customerId:null,
+    customerName: cust?cust.name:'', locationName: loc?loc.name:'',
+    serviceType, frequencyMonths, lastCompleted, nextDue, assignedTechId, notes, active:true
+  };
+  const p = id ? db.collection('services').doc(id).update(data)
+                : db.collection('services').add({...data, createdAt:new Date().toISOString()});
+  p.then(()=>{ toast(id?'Service updated.':'ITM service added.'); closeModal('modalService'); })
+   .catch(e=>toast(e.message, true));
+}
+
+/* ============================================================
+   JOBS
+   ============================================================ */
+function populateCustomerSelect(){
+  const sel = document.getElementById('jobCustomer');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Select a customer…</option>' +
+    customers.filter(c=>c.active!==false).map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+  sel.value = cur;
+}
+function populateLocationSelect(){
+  const custId = document.getElementById('jobCustomer').value;
+  const sel = document.getElementById('jobLocation');
+  const locs = locationsForCustomer(custId).filter(l=>l.active!==false);
+  sel.innerHTML = locs.length
+    ? locs.map(l=>`<option value="${l.id}">${escapeHtml(l.name)}</option>`).join('')
+    : '<option value="">No active locations</option>';
+}
+function populateTechSelects(){
+  // service default tech dropdown
+  const svcSel = document.getElementById('svcTech');
+  const curSvc = svcSel.value;
+  svcSel.innerHTML = '<option value="">Unassigned</option>' + technicians.filter(t=>t.active!==false).map(t=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+  svcSel.value = curSvc;
+
+  // calendar filter
+  const calSel = document.getElementById('calTechFilter');
+  const curCal = calSel.value;
+  calSel.innerHTML = '<option value="">All technicians</option>' + technicians.map(t=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+  calSel.value = curCal;
+
+  // jobs filter
+  const jfSel = document.getElementById('jobFilterTech');
+  const curJf = jfSel.value;
+  jfSel.innerHTML = '<option value="">All technicians</option>' + technicians.map(t=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+  jfSel.value = curJf;
+
+  // job technician checklist
+  const list = document.getElementById('jobTechChecklist');
+  const checked = new Set(Array.from(list.querySelectorAll('input:checked')).map(i=>i.value));
+  list.innerHTML = technicians.filter(t=>t.active!==false).map(t=>
+    `<label><input type="checkbox" value="${t.id}" ${checked.has(t.id)?'checked':''}> ${techColorDot(t.color)} ${escapeHtml(t.name)}</label>`
+  ).join('') || '<div style="font-size:12px;color:var(--text-faint);">Add technicians first.</div>';
+
+  populateCustomerSelect();
+}
+
+function openJobModal(prefill){
+  prefill = prefill || {};
+  document.getElementById('jobId').value = '';
+  document.getElementById('jobDeleteBtn').style.display = 'none';
+  populateTechSelects();
+  document.getElementById('jobCustomer').value = prefill.customerId || '';
+  populateLocationSelect();
+  document.getElementById('jobLocation').value = prefill.locationId || '';
+  document.getElementById('jobType').value = prefill.jobType || 'Repair';
+  document.getElementById('jobDate').value = prefill.date || '';
+  document.getElementById('jobStatus').value = 'Scheduled';
+  document.getElementById('jobNotes').value = '';
+  document.getElementById('modalJobTitle').textContent = 'Add job';
+  openModal('modalJob');
+}
+function openJobModalForEdit(id){
+  const j = jobs.find(x=>x.id===id);
+  if(!j) return;
+  populateTechSelects();
+  document.getElementById('jobId').value = id;
+  document.getElementById('jobCustomer').value = j.customerId||'';
+  populateLocationSelect();
+  document.getElementById('jobLocation').value = j.locationId||'';
+  document.getElementById('jobType').value = j.jobType||'Repair';
+  document.getElementById('jobDate').value = j.scheduledDate||'';
+  document.getElementById('jobStatus').value = j.status||'Scheduled';
+  document.getElementById('jobNotes').value = j.notes||'';
+  document.getElementById('jobDeleteBtn').style.display = 'inline-flex';
+  (j.techIds||[]).forEach(tid=>{
+    const cb = document.querySelector(`#jobTechChecklist input[value="${tid}"]`);
+    if(cb) cb.checked = true;
+  });
+  document.getElementById('modalJobTitle').textContent = 'Edit job';
+  openModal('modalJob');
+}
+function saveJob(){
+  const id = document.getElementById('jobId').value;
+  const customerId = document.getElementById('jobCustomer').value;
+  const locationId = document.getElementById('jobLocation').value;
+  const jobType = document.getElementById('jobType').value;
+  const scheduledDate = document.getElementById('jobDate').value;
+  const status = document.getElementById('jobStatus').value;
+  const notes = document.getElementById('jobNotes').value.trim();
+  const techIds = Array.from(document.querySelectorAll('#jobTechChecklist input:checked')).map(i=>i.value);
+  if(!customerId || !locationId){ toast('Select a customer and location.', true); return; }
+  if(!scheduledDate){ toast('Scheduled date is required.', true); return; }
+  const cust = customerById(customerId), loc = locationById(locationId);
+  const data = {
+    customerId, customerName: cust?cust.name:'', locationId, locationName: loc?loc.name:'',
+    jobType, scheduledDate, status, notes, techIds
+  };
+  const p = id ? db.collection('jobs').doc(id).update(data)
+               : db.collection('jobs').add({...data, createdAt:new Date().toISOString()});
+  p.then(()=>{ toast(id?'Job updated.':'Job added.'); closeModal('modalJob'); })
+   .catch(e=>toast(e.message, true));
+}
+function deleteJobConfirm(){
+  const id = document.getElementById('jobId').value;
+  if(!id) return;
+  if(!confirm('Delete this job? This cannot be undone.')) return;
+  db.collection('jobs').doc(id).delete()
+    .then(()=>{ toast('Job deleted.'); closeModal('modalJob'); })
+    .catch(e=>toast(e.message, true));
+}
+function renderJobs(){
+  const typeF = document.getElementById('jobFilterType').value;
+  const statusF = document.getElementById('jobFilterStatus').value;
+  const techF = document.getElementById('jobFilterTech').value;
+  let list = jobs.slice();
+  if(typeF) list = list.filter(j=>j.jobType===typeF);
+  if(statusF) list = list.filter(j=>j.status===statusF);
+  if(techF) list = list.filter(j=>(j.techIds||[]).includes(techF));
+  list.sort((a,b)=> (b.scheduledDate||'').localeCompare(a.scheduledDate||''));
+  const body = document.getElementById('jobsTableBody');
+  document.getElementById('jobsEmpty').style.display = list.length? 'none':'block';
+  const statusCls = {Scheduled:'badge-muted','In Progress':'badge-warn',Completed:'badge-good',Cancelled:'badge-danger'};
+  body.innerHTML = list.map(j=>{
+    const techs = (j.techIds||[]).map(id=>techById(id)).filter(Boolean);
+    return `<tr>
+      <td class="mono">${fmtDateShort(j.scheduledDate)}</td>
+      <td><span class="badge badge-muted">${escapeHtml(j.jobType)}</span></td>
+      <td>${escapeHtml(j.customerName||'')}<div style="font-size:11.5px;color:var(--text-muted);">${escapeHtml(j.locationName||'')}</div></td>
+      <td>${techs.length? techs.map(t=>`<span class="mini-chip">${techColorDot(t.color)} ${escapeHtml(t.name)}</span>`).join(' ') : '<span style="color:var(--text-faint);">Unassigned</span>'}</td>
+      <td><span class="badge ${statusCls[j.status]||'badge-muted'}">${escapeHtml(j.status||'Scheduled')}</span></td>
+      <td style="text-align:right;"><button class="icon-btn" onclick="openJobModalForEdit('${j.id}')">&#9998;</button></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ============================================================
+   TECHNICIANS
+   ============================================================ */
+function openTechModal(id){
+  document.getElementById('techId').value = id || '';
+  document.getElementById('techName').value = '';
+  document.getElementById('techColor').value = TECH_PALETTE[technicians.length % TECH_PALETTE.length];
+  document.getElementById('modalTechTitle').textContent = id ? 'Edit technician' : 'Add technician';
+  if(id){
+    const t = technicians.find(x=>x.id===id);
+    if(t){ document.getElementById('techName').value = t.name||''; document.getElementById('techColor').value = t.color||TECH_PALETTE[0]; }
+  }
+  renderColorSwatches();
+  openModal('modalTech');
+}
+function renderColorSwatches(){
+  const box = document.getElementById('techColorSwatches');
+  const current = document.getElementById('techColor').value;
+  box.innerHTML = TECH_PALETTE.map(c=>`
+    <button type="button" onclick="pickTechColor('${c}')" style="width:26px;height:26px;border-radius:50%;background:${c};border:2px solid ${c===current?'#14202E':'transparent'};box-shadow:0 0 0 1px rgba(0,0,0,0.08);"></button>
+  `).join('');
+}
+function pickTechColor(c){ document.getElementById('techColor').value = c; renderColorSwatches(); }
+function saveTechnician(){
+  const id = document.getElementById('techId').value;
+  const name = document.getElementById('techName').value.trim();
+  const color = document.getElementById('techColor').value;
+  if(!name){ toast('Technician name is required.', true); return; }
+  const data = {name, color, active:true};
+  const p = id ? db.collection('technicians').doc(id).update(data)
+               : db.collection('technicians').add({...data, createdAt:new Date().toISOString()});
+  p.then(()=>{ toast(id?'Technician updated.':'Technician added.'); closeModal('modalTech'); })
+   .catch(e=>toast(e.message, true));
+}
+function toggleTechActive(id){
+  const t = techById(id); if(!t) return;
+  db.collection('technicians').doc(id).update({active: t.active===false})
+    .then(()=> toast(t.active===false?'Technician reactivated.':'Technician marked inactive.'))
+    .catch(e=>toast(e.message, true));
+}
+function renderTechnicians(){
+  const body = document.getElementById('techTableBody');
+  document.getElementById('techEmpty').style.display = technicians.length? 'none':'block';
+  const today = todayISO();
+  body.innerHTML = technicians.map(t=>{
+    const openJobs = jobs.filter(j=> (j.techIds||[]).includes(t.id) && j.status!=='Completed' && j.status!=='Cancelled' && j.scheduledDate>=today).length;
+    return `<tr class="${t.active===false?'archived-row':''}">
+      <td>${techColorDot(t.color)}</td>
+      <td><strong>${escapeHtml(t.name)}</strong></td>
+      <td>${openJobs}</td>
+      <td>${t.active===false?'<span class="badge badge-muted">Inactive</span>':'<span class="badge badge-good">Active</span>'}</td>
+      <td style="text-align:right;">
+        <button class="icon-btn" title="Edit" onclick="openTechModal('${t.id}')">&#9998;</button>
+        <button class="icon-btn" title="${t.active===false?'Reactivate':'Deactivate'}" onclick="toggleTechActive('${t.id}')">${t.active===false?'&#8635;':'&#128465;'}</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+/* ============================================================
+   CALENDAR
+   ============================================================ */
+function calShiftMonth(delta){
+  calMonth.setMonth(calMonth.getMonth()+delta);
+  renderCalendar();
+}
+function calGoToday(){
+  calMonth = new Date(); calMonth.setDate(1);
+  renderCalendar();
+}
+function renderCalendar(){
+  const label = calMonth.toLocaleDateString('en-US',{month:'long', year:'numeric'});
+  document.getElementById('calMonthLabel').textContent = label;
+
+  // legend
+  document.getElementById('calLegend').innerHTML = technicians.filter(t=>t.active!==false).map(t=>
+    `<span class="legend-item">${techColorDot(t.color)} ${escapeHtml(t.name)}</span>`
+  ).join('') + '<span class="legend-item"><span class="dot" style="background:var(--text-faint); border:1px dashed #888;"></span> ITM due</span>';
+
+  const techFilter = document.getElementById('calTechFilter').value;
+  const showDue = document.getElementById('calShowDue').checked;
+
+  const year = calMonth.getFullYear(), month = calMonth.getMonth();
+  const firstOfMonth = new Date(year, month, 1);
+  const startOffset = firstOfMonth.getDay();
+  const gridStart = new Date(year, month, 1 - startOffset);
+  const totalCells = 42;
+  const today = todayISO();
+
+  // Build entries per date
+  const entriesByDate = {};
+  const pushEntry = (dateStr, entry) => { (entriesByDate[dateStr] = entriesByDate[dateStr]||[]).push(entry); };
+
+  jobs.forEach(j=>{
+    if(!j.scheduledDate || j.status==='Cancelled') return;
+    if(techFilter && !(j.techIds||[]).includes(techFilter)) return;
+    const primaryTech = (j.techIds||[])[0];
+    const t = primaryTech ? techById(primaryTech) : null;
+    pushEntry(j.scheduledDate, {
+      kind:'job', color: t?t.color:'#8B97A3',
+      label: `${JOB_TYPE_ABBR[j.jobType]||j.jobType} · ${j.customerName||''}`,
+      id: j.id
+    });
+  });
+  if(showDue){
+    services.forEach(s=>{
+      if(s.active===false || !s.nextDue) return;
+      if(techFilter && s.assignedTechId!==techFilter) return;
+      const t = s.assignedTechId ? techById(s.assignedTechId) : null;
+      pushEntry(s.nextDue, {
+        kind:'due', color: t?t.color:'#8B97A3',
+        label: `ITM · ${s.customerName||''}`,
+        id: s.id
+      });
+    });
+  }
+
+  const grid = document.getElementById('calGrid');
+  const dowNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  let html = dowNames.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+
+  for(let i=0;i<totalCells;i++){
+    const cellDate = new Date(gridStart);
+    cellDate.setDate(gridStart.getDate()+i);
+    const dateStr = cellDate.toISOString().slice(0,10);
+    const inMonth = cellDate.getMonth()===month;
+    const isToday = dateStr===today;
+    const entries = entriesByDate[dateStr]||[];
+    const maxShow = 3;
+    const shown = entries.slice(0,maxShow);
+    const extra = entries.length - shown.length;
+
+    html += `<div class="cal-cell ${inMonth?'':'outside'} ${isToday?'today':''}">
+      <button class="cal-add" title="Add job" onclick="openJobModal({date:'${dateStr}'})">+</button>
+      <div class="cal-daynum">${cellDate.getDate()}</div>
+      ${shown.map(en=>`<div class="cal-chip ${en.kind==='due'?'due':''}" style="border-left-color:${en.color}" onclick="${en.kind==='due'?`openDueModal('${en.id}')`:`openJobModalForEdit('${en.id}')`}">${escapeHtml(en.label)}</div>`).join('')}
+      ${extra>0? `<div class="cal-more" onclick="openDayAgenda('${dateStr}')">+${extra} more</div>` : ''}
+    </div>`;
+
+    if(i>=34 && (i+1)%7===0 && cellDate.getMonth()!==month && i>=34){
+      // allow breaking after 5 full weeks if the 6th week is entirely outside month
+      const remainingOutside = Array.from({length: totalCells-i-1}).every((_,k)=>{
+        const d2 = new Date(gridStart); d2.setDate(gridStart.getDate()+i+1+k); return d2.getMonth()!==month;
+      });
+      if(remainingOutside) break;
+    }
+  }
+  grid.innerHTML = html;
+}
+function openDayAgenda(dateStr){
+  document.getElementById('dayAgendaTitle').textContent = fmtDate(dateStr);
+  const dayJobs = jobs.filter(j=>j.scheduledDate===dateStr && j.status!=='Cancelled');
+  const dayDue = services.filter(s=>s.active!==false && s.nextDue===dateStr);
+  let html = '';
+  if(dayJobs.length===0 && dayDue.length===0){
+    html = '<div class="empty-state">Nothing scheduled this day.</div>';
+  } else {
+    dayJobs.forEach(j=>{
+      const techs = (j.techIds||[]).map(id=>techById(id)).filter(Boolean);
+      html += `<div class="agenda-item" style="cursor:pointer" onclick="closeModal('modalDayAgenda'); openJobModalForEdit('${j.id}')">
+        <div class="agenda-date"><span class="badge badge-muted">${escapeHtml(j.jobType)}</span></div>
+        <div class="agenda-main">
+          <div class="agenda-title">${escapeHtml(j.customerName||'')} — ${escapeHtml(j.locationName||'')}</div>
+          <div class="agenda-sub">${techs.length? techs.map(t=>escapeHtml(t.name)).join(', ') : 'Unassigned'}</div>
+        </div>
+      </div>`;
+    });
+    dayDue.forEach(s=>{
+      html += `<div class="agenda-item" style="cursor:pointer" onclick="closeModal('modalDayAgenda'); openDueModal('${s.id}')">
+        <div class="agenda-date"><span class="badge badge-warn">ITM</span></div>
+        <div class="agenda-main">
+          <div class="agenda-title">${escapeHtml(s.serviceType)}</div>
+          <div class="agenda-sub">${escapeHtml(s.customerName||'')} — ${escapeHtml(s.locationName||'')}</div>
+        </div>
+      </div>`;
+    });
+  }
+  document.getElementById('dayAgendaBody').innerHTML = html;
+  document.getElementById('dayAgendaAddBtn').setAttribute('onclick', `closeModal('modalDayAgenda'); openJobModal({date:'${dateStr}'})`);
+  openModal('modalDayAgenda');
+}
+
+/* ============================================================
+   DUE-SERVICE MODAL (schedule as job / mark complete)
+   ============================================================ */
+let activeDueServiceId = null;
+function openDueModal(svcId){
+  activeDueServiceId = svcId;
+  const s = services.find(x=>x.id===svcId);
+  if(!s) return;
+  const st = dueStatus(s.nextDue);
+  const t = s.assignedTechId ? techById(s.assignedTechId) : null;
+  document.getElementById('dueModalBody').innerHTML = `
+    <div class="form-row"><label>Service</label><div>${escapeHtml(s.serviceType)}</div></div>
+    <div class="form-row"><label>Customer / Location</label><div>${escapeHtml(s.customerName||'')} — ${escapeHtml(s.locationName||'')}</div></div>
+    <div class="form-row"><label>Status</label><div><span class="badge ${st.cls}">${st.label}</span> &nbsp; Next due ${fmtDate(s.nextDue)}</div></div>
+    <div class="form-row"><label>Default technician</label><div>${t? techColorDot(t.color)+' '+escapeHtml(t.name) : 'Unassigned'}</div></div>
+    ${s.notes? `<div class="form-row"><label>Notes</label><div>${escapeHtml(s.notes)}</div></div>` : ''}
+  `;
+  openModal('modalDue');
+}
+function markServiceComplete(){
+  const s = services.find(x=>x.id===activeDueServiceId);
+  if(!s) return;
+  const completedDate = todayISO();
+  const nextDue = addMonths(completedDate, s.frequencyMonths||6);
+  db.collection('services').doc(s.id).update({lastCompleted: completedDate, nextDue})
+    .then(()=>{ toast('Marked complete — next due '+fmtDate(nextDue)+'.'); closeModal('modalDue'); })
+    .catch(e=>toast(e.message, true));
+}
+function scheduleServiceAsJob(){
+  const s = services.find(x=>x.id===activeDueServiceId);
+  if(!s) return;
+  closeModal('modalDue');
+  openJobModal({customerId:s.customerId, locationId:s.locationId, jobType:'Inspection', date:s.nextDue});
+  setTimeout(()=>{
+    document.getElementById('jobNotes').value = 'Scheduled from ITM service: ' + s.serviceType;
+    if(s.assignedTechId){
+      const cb = document.querySelector(`#jobTechChecklist input[value="${s.assignedTechId}"]`);
+      if(cb) cb.checked = true;
+    }
+  }, 50);
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+renderColorSwatches();
+</script>
+</body>
+</html>
