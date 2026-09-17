@@ -615,12 +615,6 @@
    just add this domain to Authorized Domains in Firebase Auth,
    and add the collections below to Firestore security rules.)
    ============================================================ */
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyBIlOCOdyHDLDjWVJEPOcq9oYds1ats94o",
   authDomain: "skyline-service-app.firebaseapp.com",
@@ -629,9 +623,9 @@ const firebaseConfig = {
   messagingSenderId: "277154005797",
   appId: "1:277154005797:web:f1408434ba2d5d1ef850cc"
 };
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
 
 /* ============================================================
    STATE
