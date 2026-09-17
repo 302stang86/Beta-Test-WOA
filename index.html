@@ -203,6 +203,15 @@
     font-size:11px; padding:3px 8px; border-radius:4px; background:var(--muted-bg); color:var(--text);
     display:flex; align-items:center; gap:5px; border:1px solid var(--border-soft);
   }
+  .contacts-block{margin-top:8px;}
+  .contacts-block-head{display:flex; align-items:center; justify-content:space-between;}
+  .contacts-block-head .lbl{font-size:11px; font-weight:600; color:var(--text-faint); text-transform:uppercase; letter-spacing:.03em;}
+  .contact-row{display:flex; align-items:flex-start; justify-content:space-between; gap:8px; padding:6px 0; border-bottom:1px solid var(--border-soft);}
+  .contact-row:last-child{border-bottom:none;}
+  .contact-name{font-size:12.5px; font-weight:600;}
+  .contact-meta{font-size:11.5px; color:var(--text-muted); margin-top:1px;}
+  .contact-roles{display:flex; gap:4px; flex-wrap:wrap; margin-top:4px;}
+  .contact-roles .badge{padding:1px 6px; font-size:10px;}
 
   /* ---------- Modal ---------- */
   .modal-overlay{
@@ -288,6 +297,53 @@
   .toast.show{transform:translateY(0); opacity:1;}
   .toast.err{background:var(--danger);}
 
+  .pac-container{z-index:9999 !important; font-family:'IBM Plex Sans', system-ui, sans-serif !important; margin-top:2px;}
+
+  /* ---------- Dispatch board ---------- */
+  .sched-mode-toggle{display:inline-flex; border:1px solid var(--border); border-radius:6px; overflow:hidden; margin-bottom:14px;}
+  .mode-btn{
+    background:var(--surface); border:none; padding:7px 12px; font-size:14px; color:var(--text-muted); border-right:1px solid var(--border);
+  }
+  .mode-btn:last-child{border-right:none;}
+  .mode-btn.active{background:var(--navy-900); color:#fff;}
+  .mode-btn:hover:not(.active){background:var(--muted-bg);}
+  .dispatch-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:6px;}
+  table.dispatch-table{border-collapse:collapse; width:100%; min-width:820px; table-layout:fixed;}
+  .dispatch-table th, .dispatch-table td{border-bottom:1px solid var(--border-soft); border-right:1px solid var(--border-soft);}
+  .dispatch-table th:last-child, .dispatch-table td:last-child{border-right:none;}
+  .dispatch-namecol{width:168px; min-width:168px;}
+  .dispatch-daycol{width:150px;}
+  .dispatch-groupbar{
+    background:var(--muted-bg); color:var(--text); font-weight:600; font-size:12.5px; padding:8px 12px;
+    border-bottom:1px solid var(--border);
+  }
+  .dispatch-groupbar .hint{font-weight:400; font-size:11px; color:var(--text-faint); margin-left:8px;}
+  .dispatch-dayhead{
+    background:var(--navy-900); color:#B7C2CC; text-align:left; padding:8px 10px; font-size:11px; font-weight:600;
+    letter-spacing:.03em; text-transform:uppercase; position:sticky; top:0;
+  }
+  .dispatch-dayhead.today{color:#fff; background:var(--accent-dark);}
+  .dispatch-namehead{background:var(--navy-900); position:sticky; left:0; z-index:2;}
+  .dispatch-row-name{
+    padding:9px 12px; display:flex; align-items:center; gap:8px; background:var(--surface);
+    position:sticky; left:0; z-index:1; border-right:1px solid var(--border-soft);
+  }
+  .dispatch-row-name.unassigned{color:var(--text-faint);}
+  .dispatch-avatar{
+    width:24px; height:24px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    color:#fff; font-size:10.5px; font-weight:700;
+  }
+  .dispatch-name-txt{font-size:12.5px; font-weight:600;}
+  .dispatch-cell{vertical-align:top; padding:5px; background:var(--surface);}
+  .dispatch-cell.today{background:#FBF4EE;}
+  .dispatch-chip{
+    font-size:11px; padding:4px 6px; border-radius:4px; margin-bottom:4px; cursor:pointer; line-height:1.3;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; border-left:3px solid transparent;
+  }
+  .dispatch-chip:hover{filter:brightness(0.96);}
+  .dispatch-chip.due{border-left-style:dashed; font-style:italic;}
+  .dispatch-more{font-size:10.5px; color:var(--accent); font-weight:600; cursor:pointer; padding:1px 4px;}
+
   ::-webkit-scrollbar{width:9px; height:9px;}
   ::-webkit-scrollbar-thumb{background:#C8CFD5; border-radius:5px;}
   ::-webkit-scrollbar-track{background:transparent;}
@@ -366,26 +422,60 @@
         </div>
       </div>
 
-      <!-- ---------- CALENDAR ---------- -->
+      <!-- ---------- CALENDAR / DISPATCH ---------- -->
       <div class="view-section" id="view-calendar">
-        <div class="cal-toolbar">
-          <div class="cal-nav">
-            <button class="icon-btn" onclick="calShiftMonth(-1)">&#8249;</button>
-            <div class="month-label" id="calMonthLabel">—</div>
-            <button class="icon-btn" onclick="calShiftMonth(1)">&#8250;</button>
-            <button class="btn btn-ghost btn-sm" onclick="calGoToday()">Today</button>
+        <div class="sched-mode-toggle">
+          <button class="mode-btn active" id="modeBtnDispatch" onclick="setScheduleMode('dispatch')" title="Dispatch board">&#9776;</button>
+          <button class="mode-btn" id="modeBtnMonth" onclick="setScheduleMode('month')" title="Month view">&#128197;</button>
+        </div>
+
+        <!-- Dispatch board (default) -->
+        <div id="scheduleSubDispatch">
+          <div class="cal-toolbar">
+            <div class="cal-nav">
+              <button class="icon-btn" onclick="dispatchShiftWeek(-1)">&#8249;</button>
+              <div class="month-label" id="dispatchWeekLabel">—</div>
+              <button class="icon-btn" onclick="dispatchShiftWeek(1)">&#8250;</button>
+              <button class="btn btn-ghost btn-sm" onclick="dispatchGoToday()">This week</button>
+            </div>
+            <div class="toolbar">
+              <label style="font-size:12.5px; color:var(--text-muted); display:flex; align-items:center; gap:5px;">
+                <input type="checkbox" id="dispatchShowDue" checked onchange="renderDispatch()"> Show ITM due
+              </label>
+              <label style="font-size:12.5px; color:var(--text-muted); display:flex; align-items:center; gap:5px;">
+                <input type="checkbox" id="dispatchHideUnassigned" onchange="renderDispatch()"> Hide unassigned
+              </label>
+              <label style="font-size:12.5px; color:var(--text-muted); display:flex; align-items:center; gap:5px;">
+                <input type="checkbox" id="dispatchShowInactive" onchange="renderDispatch()"> Show inactive techs
+              </label>
+            </div>
           </div>
-          <div class="toolbar">
-            <select id="calTechFilter" onchange="renderCalendar()">
-              <option value="">All technicians</option>
-            </select>
-            <label style="font-size:12.5px; color:var(--text-muted); display:flex; align-items:center; gap:5px;">
-              <input type="checkbox" id="calShowDue" checked onchange="renderCalendar()"> Show ITM due
-            </label>
+          <div class="dispatch-wrap">
+            <table class="dispatch-table" id="dispatchTable"></table>
           </div>
         </div>
-        <div class="cal-legend" id="calLegend" style="margin-bottom:10px;"></div>
-        <div class="cal-grid" id="calGrid"></div>
+
+        <!-- Month view -->
+        <div id="scheduleSubMonth" style="display:none;">
+          <div class="cal-toolbar">
+            <div class="cal-nav">
+              <button class="icon-btn" onclick="calShiftMonth(-1)">&#8249;</button>
+              <div class="month-label" id="calMonthLabel">—</div>
+              <button class="icon-btn" onclick="calShiftMonth(1)">&#8250;</button>
+              <button class="btn btn-ghost btn-sm" onclick="calGoToday()">Today</button>
+            </div>
+            <div class="toolbar">
+              <select id="calTechFilter" onchange="renderCalendar()">
+                <option value="">All technicians</option>
+              </select>
+              <label style="font-size:12.5px; color:var(--text-muted); display:flex; align-items:center; gap:5px;">
+                <input type="checkbox" id="calShowDue" checked onchange="renderCalendar()"> Show ITM due
+              </label>
+            </div>
+          </div>
+          <div class="cal-legend" id="calLegend" style="margin-bottom:10px;"></div>
+          <div class="cal-grid" id="calGrid"></div>
+        </div>
       </div>
 
       <!-- ---------- CUSTOMERS ---------- -->
@@ -458,7 +548,12 @@
     <div class="modal-head"><h3 id="modalCustomerTitle">Add customer</h3><button class="modal-close" onclick="closeModal('modalCustomer')">&times;</button></div>
     <div class="modal-body">
       <input type="hidden" id="custId">
-      <div class="form-row"><label>Company name</label><input type="text" id="custName" placeholder="e.g. Great Lakes Manufacturing"></div>
+      <div class="form-row">
+        <label>Company name</label>
+        <input type="text" id="custName" placeholder="Start typing to search…" autocomplete="off">
+        <div class="form-hint">Matches from Google — pick one to auto-fill the address, or just type a name.</div>
+      </div>
+      <div class="form-row"><label>Address</label><input type="text" id="custAddress" placeholder="Auto-fills from the search above, or type your own"></div>
       <div class="form-row"><label>Notes (optional)</label><textarea id="custNotes" placeholder="Billing contact, account notes…"></textarea></div>
     </div>
     <div class="modal-foot">
@@ -475,7 +570,11 @@
     <div class="modal-body">
       <input type="hidden" id="locId"><input type="hidden" id="locCustId">
       <div class="form-row"><label>Location name</label><input type="text" id="locName" placeholder="e.g. Main Plant, Building B"></div>
-      <div class="form-row"><label>Address</label><input type="text" id="locAddress" placeholder="Street, city, state, ZIP"></div>
+      <div class="form-row">
+        <label>Address</label>
+        <input type="text" id="locAddress" placeholder="Start typing to search…" autocomplete="off">
+        <div class="form-hint">Matches from Google — pick one to auto-fill the address (and the name, if blank).</div>
+      </div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal('modalLocation')">Cancel</button>
@@ -546,8 +645,11 @@
         </div>
         <div class="form-row"><label>Scheduled date</label><input type="date" id="jobDate"></div>
       </div>
-      <div class="form-row"><label>Status</label>
-        <select id="jobStatus"><option>Scheduled</option><option>In Progress</option><option>Completed</option><option>Cancelled</option></select>
+      <div class="form-grid2">
+        <div class="form-row"><label>Scheduled time (optional)</label><input type="time" id="jobTime"></div>
+        <div class="form-row"><label>Status</label>
+          <select id="jobStatus"><option>Scheduled</option><option>In Progress</option><option>Completed</option><option>Cancelled</option></select>
+        </div>
       </div>
       <div class="form-row"><label>Technicians</label><div class="checklist" id="jobTechChecklist"></div></div>
       <div class="form-row"><label>Notes (optional)</label><textarea id="jobNotes" placeholder="Scope, PO number, access instructions…"></textarea></div>
@@ -556,6 +658,31 @@
       <button class="btn btn-danger" id="jobDeleteBtn" style="display:none; margin-right:auto;" onclick="deleteJobConfirm()">Delete</button>
       <button class="btn btn-ghost" onclick="closeModal('modalJob')">Cancel</button>
       <button class="btn btn-primary" onclick="saveJob()">Save job</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add / edit contact -->
+<div class="modal-overlay" id="modalContact">
+  <div class="modal">
+    <div class="modal-head"><h3 id="modalContactTitle">Add contact</h3><button class="modal-close" onclick="closeModal('modalContact')">&times;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="contactId">
+      <input type="hidden" id="contactCustomerId">
+      <input type="hidden" id="contactLocationId">
+      <div class="form-row" id="contactScopeLabel" style="font-size:12px; color:var(--text-muted);"></div>
+      <div class="form-row"><label>Name</label><input type="text" id="contactName" placeholder="Full name"></div>
+      <div class="form-grid2">
+        <div class="form-row"><label>Phone</label><input type="tel" id="contactPhone" placeholder="(248) 555-0100"></div>
+        <div class="form-row"><label>Email</label><input type="email" id="contactEmail" placeholder="name@company.com"></div>
+      </div>
+      <div class="form-row"><label>Role(s)</label><div class="checklist" id="contactRoleChecklist"></div></div>
+      <div class="form-row"><label>Notes (optional)</label><textarea id="contactNotes" placeholder="Best time to reach, preferences, etc."></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger" id="contactDeleteBtn" style="display:none; margin-right:auto;" onclick="deleteContactConfirm()">Delete</button>
+      <button class="btn btn-ghost" onclick="closeModal('modalContact')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveContact()">Save contact</button>
     </div>
   </div>
 </div>
@@ -608,6 +735,17 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<!--
+  GOOGLE PLACES AUTOCOMPLETE — replace YOUR_GOOGLE_MAPS_API_KEY below.
+  Get a key at console.cloud.google.com: create/select a project, enable the
+  "Places API" and "Maps JavaScript API", create an API key under Credentials,
+  and (recommended) restrict it to your GitHub Pages domain under
+  Application restrictions > HTTP referrers. Billing must be enabled on the
+  Google Cloud project — Places has a monthly free credit that comfortably
+  covers this app's usage, but the API key won't work at all without a
+  billing account attached.
+-->
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=places"></script>
 <script>
 /* ============================================================
    FIREBASE CONFIG — replace with your project's config object.
@@ -635,13 +773,18 @@ let locations = [];
 let services = [];
 let jobs = [];
 let technicians = [];
+let contacts = [];
 let unsubscribers = [];
 let currentView = 'dashboard';
+let scheduleMode = 'dispatch';
 let calMonth = new Date(); calMonth.setDate(1);
+let dispatchWeekStart = startOfWeek(new Date());
 let expandedCustomerIds = new Set();
 
 const JOB_TYPES = ['Repair','Install','Inspection','Emergency Call','Survey'];
 const JOB_TYPE_ABBR = {'Repair':'RPR','Install':'INST','Inspection':'INSP','Emergency Call':'EMRG','Survey':'SURV'};
+const JOB_TYPE_COLORS = {'Repair':'#2E7D5B','Install':'#2E6F9E','Inspection':'#1E8F82','Emergency Call':'#B23A2E','Survey':'#8A4FC1'};
+const CONTACT_ROLES = ['Primary Contact','On-Site Contact','Off-Site Contact','Location Contact','Invoicing','Manager','Maintenance','Other'];
 const TECH_PALETTE = ['#2E6F9E','#8A4FC1','#C1432A','#2E7D5B','#C98A1E','#4F6BC1','#B23A80','#5B8A2E','#3E8FA6','#A65A2E'];
 
 /* ============================================================
@@ -722,12 +865,18 @@ function startListeners(){
     technicians.sort((a,b)=> (a.name||'').localeCompare(b.name||''));
     renderAll();
   }, err => toast('Error loading technicians: '+err.message, true)));
+
+  unsubscribers.push(db.collection('contacts').onSnapshot(snap => {
+    contacts = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    renderAll();
+  }, err => toast('Error loading contacts: '+err.message, true)));
 }
 
 function renderAll(){
   populateTechSelects();
   renderDashboard();
   renderCalendar();
+  renderDispatch();
   renderCustomers();
   renderJobs();
   renderTechnicians();
@@ -750,7 +899,15 @@ function switchView(view){
   document.getElementById('topbarTitle').textContent = VIEW_TITLES[view][0];
   document.getElementById('topbarSub').textContent = VIEW_TITLES[view][1];
   renderTopbarActions(view);
-  if(view==='calendar') renderCalendar();
+  if(view==='calendar'){ renderCalendar(); renderDispatch(); }
+}
+function setScheduleMode(mode){
+  scheduleMode = mode;
+  document.getElementById('modeBtnDispatch').classList.toggle('active', mode==='dispatch');
+  document.getElementById('modeBtnMonth').classList.toggle('active', mode==='month');
+  document.getElementById('scheduleSubDispatch').style.display = mode==='dispatch' ? 'block' : 'none';
+  document.getElementById('scheduleSubMonth').style.display = mode==='month' ? 'block' : 'none';
+  if(mode==='dispatch') renderDispatch(); else renderCalendar();
 }
 function renderTopbarActions(view){
   const box = document.getElementById('topbarActions');
@@ -791,6 +948,31 @@ function fmtDateShort(iso){
   return d.toLocaleDateString('en-US',{month:'short', day:'numeric'});
 }
 function todayISO(){ return new Date().toISOString().slice(0,10); }
+function startOfWeek(d){
+  const nd = new Date(d);
+  nd.setDate(nd.getDate() - nd.getDay());
+  nd.setHours(0,0,0,0);
+  return nd;
+}
+function isoOf(d){ return d.toISOString().slice(0,10); }
+function formatTimeShort(t){
+  if(!t) return '';
+  const [hStr, mStr] = t.split(':');
+  let h = parseInt(hStr,10);
+  const m = parseInt(mStr,10);
+  const ampm = h >= 12 ? 'p' : 'a';
+  h = h % 12; if(h===0) h = 12;
+  return m ? `${h}:${String(m).padStart(2,'0')}${ampm}` : `${h}${ampm}`;
+}
+function formatTimeLabel(t){
+  if(!t) return '';
+  const [hStr, mStr] = t.split(':');
+  let h = parseInt(hStr,10);
+  const m = parseInt(mStr,10);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12; if(h===0) h = 12;
+  return `${h}:${String(m).padStart(2,'0')} ${ampm}`;
+}
 function addMonths(iso, months){
   const d = new Date(iso+'T00:00:00');
   d.setMonth(d.getMonth()+months);
@@ -805,6 +987,8 @@ function locationById(id){ return locations.find(l=>l.id===id); }
 function techById(id){ return technicians.find(t=>t.id===id); }
 function locationsForCustomer(custId){ return locations.filter(l=>l.customerId===custId); }
 function servicesForLocation(locId){ return services.filter(s=>s.locationId===locId); }
+function contactsForCustomer(custId){ return contacts.filter(ct=>ct.customerId===custId && !ct.locationId); }
+function contactsForLocation(locId){ return contacts.filter(ct=>ct.locationId===locId); }
 function techColorDot(color){ return `<span class="dot" style="background:${color||'#8B97A3'}"></span>`; }
 
 function dueStatus(nextDue){
@@ -904,7 +1088,7 @@ function renderCustomers(){
     tr.className = 'cust-row' + (c.active===false?' archived-row':'');
     tr.innerHTML = `
       <td>${expanded?'&#9662;':'&#9656;'}</td>
-      <td><strong>${escapeHtml(c.name)}</strong>${c.notes?`<div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">${escapeHtml(c.notes)}</div>`:''}</td>
+      <td><strong>${escapeHtml(c.name)}</strong>${c.address?`<div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">${escapeHtml(c.address)}</div>`:(c.notes?`<div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">${escapeHtml(c.notes)}</div>`:'')}</td>
       <td>${activeLocs.length} location${activeLocs.length!==1?'s':''}</td>
       <td>${c.active===false?'<span class="badge badge-muted">Archived</span>':'<span class="badge badge-good">Active</span>'}</td>
       <td style="text-align:right;">
@@ -918,7 +1102,17 @@ function renderCustomers(){
       const subTr = document.createElement('tr');
       subTr.className = 'loc-sub';
       const locsToShow = showArchived ? locs : activeLocs;
+      const custContacts = contactsForCustomer(c.id);
       subTr.innerHTML = `<td colspan="5"><div class="loc-inner">
+        <div class="loc-card" style="margin-top:0;">
+          <div class="loc-card-head">
+            <div class="loc-card-title">Company contacts</div>
+            <button class="icon-btn" title="Add contact" onclick="openContactModal(null,'${c.id}',null)">+</button>
+          </div>
+          <div class="contacts-block">
+            ${custContacts.length ? custContacts.map(renderContactRow).join('') : '<div style="font-size:11.5px;color:var(--text-faint);padding:4px 0;">No company contacts yet.</div>'}
+          </div>
+        </div>
         ${locsToShow.map(l => renderLocationCard(l, c)).join('') || '<div style="font-size:12.5px;color:var(--text-faint);padding:6px 0;">No locations yet.</div>'}
         <button class="link-btn" onclick="openLocationModal(null,'${c.id}')" style="margin-top:6px;">+ Add location</button>
       </div></td>`;
@@ -932,6 +1126,7 @@ function toggleCustomerExpand(id){
 }
 function renderLocationCard(l, c){
   const svcs = servicesForLocation(l.id).filter(s=>s.active!==false);
+  const locContacts = contactsForLocation(l.id);
   return `<div class="loc-card${l.active===false?' archived-row':''}">
     <div class="loc-card-head">
       <div>
@@ -950,28 +1145,42 @@ function renderLocationCard(l, c){
         return `<span class="mini-chip" style="cursor:pointer" onclick="openServiceModal('${s.id}','${l.id}')" title="Next due ${fmtDate(s.nextDue)}"><span class="badge ${st.cls}" style="padding:1px 6px;">${st.label}</span> ${escapeHtml(s.serviceType)}</span>`;
       }).join('') : '<span style="font-size:11.5px;color:var(--text-faint);">No ITM services scheduled.</span>'}
     </div>
+    <div class="contacts-block">
+      <div class="contacts-block-head">
+        <span class="lbl">Contacts</span>
+        <button class="icon-btn" title="Add contact" onclick="openContactModal(null,'${c.id}','${l.id}')">+</button>
+      </div>
+      ${locContacts.length ? locContacts.map(renderContactRow).join('') : '<div style="font-size:11.5px;color:var(--text-faint);padding:4px 0;">No contacts yet.</div>'}
+    </div>
   </div>`;
 }
 
 function openCustomerModal(id){
   document.getElementById('custId').value = id || '';
   document.getElementById('custName').value = '';
+  document.getElementById('custAddress').value = '';
   document.getElementById('custNotes').value = '';
   document.getElementById('modalCustomerTitle').textContent = id ? 'Edit customer' : 'Add customer';
   if(id){
     const c = customerById(id);
-    if(c){ document.getElementById('custName').value = c.name||''; document.getElementById('custNotes').value = c.notes||''; }
+    if(c){
+      document.getElementById('custName').value = c.name||'';
+      document.getElementById('custAddress').value = c.address||'';
+      document.getElementById('custNotes').value = c.notes||'';
+    }
   }
   openModal('modalCustomer');
+  setupCustomerAutocomplete();
 }
 function saveCustomer(){
   const id = document.getElementById('custId').value;
   const name = document.getElementById('custName').value.trim();
+  const address = document.getElementById('custAddress').value.trim();
   const notes = document.getElementById('custNotes').value.trim();
   if(!name){ toast('Company name is required.', true); return; }
-  const data = { name, notes, active:true, updatedAt: new Date().toISOString() };
+  const data = { name, address, notes, active:true, updatedAt: new Date().toISOString() };
   if(id){
-    db.collection('customers').doc(id).update({name, notes, updatedAt:data.updatedAt})
+    db.collection('customers').doc(id).update({name, address, notes, updatedAt:data.updatedAt})
       .then(()=>{ toast('Customer updated.'); closeModal('modalCustomer'); syncDenormalizedNames(id, name); })
       .catch(e=>toast(e.message, true));
   } else {
@@ -980,6 +1189,33 @@ function saveCustomer(){
       .then(()=>{ toast('Customer added.'); closeModal('modalCustomer'); })
       .catch(e=>toast(e.message, true));
   }
+}
+function setupCustomerAutocomplete(){
+  if(typeof google === 'undefined' || !google.maps || !google.maps.places) return;
+  const input = document.getElementById('custName');
+  if(!input || input._placesAttached) return;
+  input._placesAttached = true;
+  const ac = new google.maps.places.Autocomplete(input, { fields: ['name','formatted_address'] });
+  ac.addListener('place_changed', () => {
+    const place = ac.getPlace();
+    if(!place) return;
+    if(place.name) input.value = place.name;
+    if(place.formatted_address) document.getElementById('custAddress').value = place.formatted_address;
+  });
+}
+function setupLocationAutocomplete(){
+  if(typeof google === 'undefined' || !google.maps || !google.maps.places) return;
+  const input = document.getElementById('locAddress');
+  if(!input || input._placesAttached) return;
+  input._placesAttached = true;
+  const ac = new google.maps.places.Autocomplete(input, { fields: ['name','formatted_address'] });
+  ac.addListener('place_changed', () => {
+    const place = ac.getPlace();
+    if(!place) return;
+    if(place.formatted_address) input.value = place.formatted_address;
+    const nameField = document.getElementById('locName');
+    if(place.name && nameField && !nameField.value.trim()) nameField.value = place.name;
+  });
 }
 function toggleCustomerActive(id){
   const c = customerById(id); if(!c) return;
@@ -1007,6 +1243,7 @@ function openLocationModal(id, custId){
     if(l){ document.getElementById('locName').value = l.name||''; document.getElementById('locAddress').value = l.address||''; }
   }
   openModal('modalLocation');
+  setupLocationAutocomplete();
 }
 function saveLocation(){
   const id = document.getElementById('locId').value;
@@ -1149,6 +1386,7 @@ function openJobModal(prefill){
   document.getElementById('jobLocation').value = prefill.locationId || '';
   document.getElementById('jobType').value = prefill.jobType || 'Repair';
   document.getElementById('jobDate').value = prefill.date || '';
+  document.getElementById('jobTime').value = prefill.time || '';
   document.getElementById('jobStatus').value = 'Scheduled';
   document.getElementById('jobNotes').value = '';
   document.getElementById('modalJobTitle').textContent = 'Add job';
@@ -1164,6 +1402,7 @@ function openJobModalForEdit(id){
   document.getElementById('jobLocation').value = j.locationId||'';
   document.getElementById('jobType').value = j.jobType||'Repair';
   document.getElementById('jobDate').value = j.scheduledDate||'';
+  document.getElementById('jobTime').value = j.scheduledTime||'';
   document.getElementById('jobStatus').value = j.status||'Scheduled';
   document.getElementById('jobNotes').value = j.notes||'';
   document.getElementById('jobDeleteBtn').style.display = 'inline-flex';
@@ -1180,6 +1419,7 @@ function saveJob(){
   const locationId = document.getElementById('jobLocation').value;
   const jobType = document.getElementById('jobType').value;
   const scheduledDate = document.getElementById('jobDate').value;
+  const scheduledTime = document.getElementById('jobTime').value || null;
   const status = document.getElementById('jobStatus').value;
   const notes = document.getElementById('jobNotes').value.trim();
   const techIds = Array.from(document.querySelectorAll('#jobTechChecklist input:checked')).map(i=>i.value);
@@ -1188,7 +1428,7 @@ function saveJob(){
   const cust = customerById(customerId), loc = locationById(locationId);
   const data = {
     customerId, customerName: cust?cust.name:'', locationId, locationName: loc?loc.name:'',
-    jobType, scheduledDate, status, notes, techIds
+    jobType, scheduledDate, scheduledTime, status, notes, techIds
   };
   const p = id ? db.collection('jobs').doc(id).update(data)
                : db.collection('jobs').add({...data, createdAt:new Date().toISOString()});
@@ -1226,6 +1466,94 @@ function renderJobs(){
       <td style="text-align:right;"><button class="icon-btn" onclick="openJobModalForEdit('${j.id}')">&#9998;</button></td>
     </tr>`;
   }).join('');
+}
+
+/* ============================================================
+   CONTACTS (company-level and location-level)
+   ============================================================ */
+function populateContactRoleChecklist(selected){
+  const list = document.getElementById('contactRoleChecklist');
+  const sel = new Set(selected||[]);
+  list.innerHTML = CONTACT_ROLES.map(r=>
+    `<label><input type="checkbox" value="${r}" ${sel.has(r)?'checked':''}> ${r}</label>`
+  ).join('');
+}
+function openContactModal(id, customerId, locationId){
+  document.getElementById('contactId').value = id || '';
+  document.getElementById('contactCustomerId').value = customerId || '';
+  document.getElementById('contactLocationId').value = locationId || '';
+  document.getElementById('contactName').value = '';
+  document.getElementById('contactPhone').value = '';
+  document.getElementById('contactEmail').value = '';
+  document.getElementById('contactNotes').value = '';
+  document.getElementById('contactDeleteBtn').style.display = 'none';
+  let selectedRoles = [];
+  let scopeCustomerId = customerId, scopeLocationId = locationId;
+  if(id){
+    const ct = contacts.find(x=>x.id===id);
+    if(ct){
+      document.getElementById('contactName').value = ct.name||'';
+      document.getElementById('contactPhone').value = ct.phone||'';
+      document.getElementById('contactEmail').value = ct.email||'';
+      document.getElementById('contactNotes').value = ct.notes||'';
+      selectedRoles = ct.roles||[];
+      scopeCustomerId = ct.customerId; scopeLocationId = ct.locationId;
+      document.getElementById('contactCustomerId').value = scopeCustomerId || '';
+      document.getElementById('contactLocationId').value = scopeLocationId || '';
+      document.getElementById('contactDeleteBtn').style.display = 'inline-flex';
+    }
+  }
+  const cust = customerById(scopeCustomerId);
+  const loc = scopeLocationId ? locationById(scopeLocationId) : null;
+  document.getElementById('contactScopeLabel').textContent = loc
+    ? `Location contact — ${cust?cust.name:''} / ${loc.name}`
+    : `Company contact — ${cust?cust.name:''}`;
+  document.getElementById('modalContactTitle').textContent = id ? 'Edit contact' : 'Add contact';
+  populateContactRoleChecklist(selectedRoles);
+  openModal('modalContact');
+}
+function saveContact(){
+  const id = document.getElementById('contactId').value;
+  const customerId = document.getElementById('contactCustomerId').value;
+  const locationId = document.getElementById('contactLocationId').value || null;
+  const name = document.getElementById('contactName').value.trim();
+  const phone = document.getElementById('contactPhone').value.trim();
+  const email = document.getElementById('contactEmail').value.trim();
+  const notes = document.getElementById('contactNotes').value.trim();
+  const roles = Array.from(document.querySelectorAll('#contactRoleChecklist input:checked')).map(i=>i.value);
+  if(!name){ toast('Contact name is required.', true); return; }
+  if(!customerId){ toast('Missing customer for this contact.', true); return; }
+  const cust = customerById(customerId);
+  const loc = locationId ? locationById(locationId) : null;
+  const data = {
+    customerId, customerName: cust?cust.name:'',
+    locationId: locationId || null, locationName: loc?loc.name:'',
+    name, phone, email, roles, notes
+  };
+  const p = id ? db.collection('contacts').doc(id).update(data)
+               : db.collection('contacts').add({...data, createdAt:new Date().toISOString()});
+  p.then(()=>{ toast(id?'Contact updated.':'Contact added.'); closeModal('modalContact'); })
+   .catch(e=>toast(e.message, true));
+}
+function deleteContactConfirm(){
+  const id = document.getElementById('contactId').value;
+  if(!id) return;
+  if(!confirm('Delete this contact? This cannot be undone.')) return;
+  db.collection('contacts').doc(id).delete()
+    .then(()=>{ toast('Contact deleted.'); closeModal('modalContact'); })
+    .catch(e=>toast(e.message, true));
+}
+function renderContactRow(ct){
+  const rolesHtml = (ct.roles||[]).map(r=>`<span class="badge badge-muted">${escapeHtml(r)}</span>`).join(' ');
+  const meta = [ct.phone, ct.email].filter(Boolean).map(escapeHtml).join(' · ');
+  return `<div class="contact-row">
+    <div>
+      <div class="contact-name">${escapeHtml(ct.name)}</div>
+      ${meta?`<div class="contact-meta">${meta}</div>`:''}
+      ${rolesHtml?`<div class="contact-roles">${rolesHtml}</div>`:''}
+    </div>
+    <button class="icon-btn" title="Edit" onclick="openContactModal('${ct.id}','${ct.customerId}','${ct.locationId||''}')">&#9998;</button>
+  </div>`;
 }
 
 /* ============================================================
@@ -1377,6 +1705,112 @@ function renderCalendar(){
   }
   grid.innerHTML = html;
 }
+
+/* ============================================================
+   DISPATCH BOARD (row-per-technician week view)
+   ============================================================ */
+function dispatchShiftWeek(delta){
+  dispatchWeekStart.setDate(dispatchWeekStart.getDate() + delta*7);
+  renderDispatch();
+}
+function dispatchGoToday(){
+  dispatchWeekStart = startOfWeek(new Date());
+  renderDispatch();
+}
+function renderDispatch(){
+  const table = document.getElementById('dispatchTable');
+  if(!table) return; // dispatch sub-view not in DOM yet
+  const days = [];
+  for(let i=0;i<7;i++){ const d = new Date(dispatchWeekStart); d.setDate(d.getDate()+i); days.push(d); }
+  const weekLabelEl = document.getElementById('dispatchWeekLabel');
+  if(weekLabelEl){
+    const optsShort = {month:'short', day:'numeric'};
+    weekLabelEl.textContent = `${days[0].toLocaleDateString('en-US',optsShort)} – ${days[6].toLocaleDateString('en-US',{...optsShort, year:'numeric'})}`;
+  }
+
+  const showDue = document.getElementById('dispatchShowDue').checked;
+  const hideUnassigned = document.getElementById('dispatchHideUnassigned').checked;
+  const showInactive = document.getElementById('dispatchShowInactive').checked;
+  const today = todayISO();
+
+  const rowTechs = technicians.filter(t=> showInactive || t.active!==false);
+
+  // Build entries keyed by "techKey|dateStr" — techKey is tech.id or 'unassigned'
+  const entries = {};
+  const pushEntry = (techKey, dateStr, entry) => {
+    const key = techKey+'|'+dateStr;
+    (entries[key] = entries[key]||[]).push(entry);
+  };
+  jobs.forEach(j=>{
+    if(!j.scheduledDate || j.status==='Cancelled') return;
+    const techIds = (j.techIds||[]).length ? j.techIds : ['unassigned'];
+    techIds.forEach(tid=>{
+      pushEntry(tid, j.scheduledDate, {
+        kind:'job', color: JOB_TYPE_COLORS[j.jobType]||'#8B97A3', time: j.scheduledTime||'',
+        label: `${j.customerName||''}${j.locationName?' — '+j.locationName:''}`, id:j.id, sortKey: j.scheduledTime||'99:99'
+      });
+    });
+  });
+  if(showDue){
+    services.forEach(s=>{
+      if(s.active===false || !s.nextDue) return;
+      const techKey = s.assignedTechId || 'unassigned';
+      pushEntry(techKey, s.nextDue, {
+        kind:'due', color:'#B4790E', time:'',
+        label: `ITM — ${s.customerName||''}`, id:s.id, sortKey:'00:00'
+      });
+    });
+  }
+  Object.values(entries).forEach(list => list.sort((a,b)=> a.sortKey.localeCompare(b.sortKey)));
+
+  const dowNames = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  let thead = `<thead><tr>
+    <th class="dispatch-namecol dispatch-namehead"></th>
+    ${days.map(d=>{
+      const dateStr = isoOf(d);
+      return `<th class="dispatch-daycol dispatch-dayhead ${dateStr===today?'today':''}">${dowNames[d.getDay()]} ${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}</th>`;
+    }).join('')}
+  </tr></thead>`;
+
+  const buildCell = (techKey, dateStr) => {
+    const list = entries[techKey+'|'+dateStr] || [];
+    const shown = list.slice(0,3);
+    const extra = list.length - shown.length;
+    const isToday = dateStr===today;
+    return `<td class="dispatch-cell ${isToday?'today':''}">
+      ${shown.map(en=>{
+        const chipStyle = en.kind==='due'
+          ? `background:#FBF0DA; color:#8A5C09; border-left-color:${en.color};`
+          : `background:${en.color}22; color:${en.color}; border-left-color:${en.color};`;
+        const timePrefix = en.time ? escapeHtml(formatTimeShort(en.time))+' - ' : '';
+        const clickFn = en.kind==='due' ? `openDueModal('${en.id}')` : `openJobModalForEdit('${en.id}')`;
+        return `<div class="dispatch-chip ${en.kind==='due'?'due':''}" style="${chipStyle}" onclick="${clickFn}" title="${escapeHtml(timePrefix+en.label)}">${timePrefix}${escapeHtml(en.label)}</div>`;
+      }).join('')}
+      ${extra>0? `<div class="dispatch-more" onclick="openDayAgenda('${dateStr}')">+${extra} more …</div>` : ''}
+    </td>`;
+  };
+
+  let tbody = '<tbody>';
+  tbody += `<tr><td colspan="8" class="dispatch-groupbar">Sprinkler Department<span class="hint">${technicians.filter(t=>t.active===false).length ? '('+technicians.filter(t=>t.active===false).length+') inactive hidden' : ''}</span></td></tr>`;
+
+  if(!hideUnassigned){
+    tbody += `<tr>
+      <td class="dispatch-namecol"><div class="dispatch-row-name unassigned"><span class="dispatch-avatar" style="background:#B7C2CC;">?</span><span class="dispatch-name-txt">Unassigned</span></div></td>
+      ${days.map(d=>buildCell('unassigned', isoOf(d))).join('')}
+    </tr>`;
+  }
+  rowTechs.forEach(t=>{
+    const initials = (t.name||'?').split(' ').map(p=>p[0]).filter(Boolean).slice(0,2).join('').toUpperCase();
+    tbody += `<tr${t.active===false?' style="opacity:.55;"':''}>
+      <td class="dispatch-namecol"><div class="dispatch-row-name"><span class="dispatch-avatar" style="background:${t.color||'#8B97A3'};">${initials}</span><span class="dispatch-name-txt">${escapeHtml(t.name)}</span></div></td>
+      ${days.map(d=>buildCell(t.id, isoOf(d))).join('')}
+    </tr>`;
+  });
+  tbody += '</tbody>';
+
+  table.innerHTML = thead + tbody;
+}
+
 function openDayAgenda(dateStr){
   document.getElementById('dayAgendaTitle').textContent = fmtDate(dateStr);
   const dayJobs = jobs.filter(j=>j.scheduledDate===dateStr && j.status!=='Cancelled');
